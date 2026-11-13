@@ -127,6 +127,53 @@ h1,h2,h3{margin:0;font-family:var(--head);font-weight:700;letter-spacing:.01em}
 body.dragging-ex .sec{overflow:visible}
 body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
 .dropline{position:fixed;height:4px;border-radius:4px;background:var(--accent);z-index:40;pointer-events:none}
+.tabs{display:flex;gap:4px;background:var(--chip);border-radius:14px;padding:4px;margin-bottom:12px}
+.tab{flex:1;min-height:40px;border-radius:11px;font-weight:600;color:var(--mute)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;box-shadow:var(--shadow)}
+.panel h3{font-size:22px;margin-bottom:2px}
+.panel .mute,.mute{color:var(--mute);font-size:13px;margin:4px 0 0}
+.prow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.pc small{display:block;color:var(--mute);font-size:12px}
+.pc .big{display:block;font:700 30px/1.1 var(--head);margin:2px 0}
+.pc b.up,.pc b.dn,.pc b{font-size:12px;font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:5px;height:150px;margin-top:12px}
+.bc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.bb{width:100%;max-width:36px;background:var(--accent);opacity:.55;border-radius:6px 6px 2px 2px;min-height:3px}
+.bc.cur .bb{opacity:1}
+.bb.z{background:var(--chip);opacity:1}
+.bv{font-size:10px;color:var(--mute);height:14px;line-height:14px;font-variant-numeric:tabular-nums}
+.bl{font-size:11px;color:var(--mute);height:16px;line-height:16px;white-space:nowrap}
+.seg{display:flex;gap:6px;margin-top:10px}
+.seg .chip{min-height:34px;font-size:13px;padding:0 12px}
+.mr{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;margin:10px 0 0;font-size:14px}
+.mr span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.mt{height:10px;background:var(--chip);border-radius:6px;overflow:hidden}
+.mt i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.mr em{font-style:normal;color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sel{width:100%;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-weight:600;margin-top:10px}
+.lc{width:100%;height:auto;margin-top:8px;display:block}
+.lc text{fill:var(--mute);font-size:10px;font-family:var(--body)}
+.lc .gl{stroke:var(--line);stroke-width:1}
+.lc .ln{stroke:var(--accent);fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.lc circle{fill:var(--card);stroke:var(--accent);stroke-width:2}
+.lc circle.pr{fill:var(--good);stroke:var(--good)}
+.st3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.st3 div{background:var(--bg);border-radius:12px;padding:8px 10px}
+.st3 small{display:block;color:var(--mute);font-size:11px}
+.st3 b{font:700 20px/1.2 var(--head)}
+.srow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow .a{flex:1;min-width:0}
+.srow .a b{display:block;font-size:14px}
+.srow .a small{color:var(--mute);font-size:12px}
+.srow .r{text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.srow .ib{width:36px;height:36px;font-size:15px;background:transparent;color:var(--mute)}
+.prl{font-size:14px;padding:7px 0;border-bottom:1px solid var(--line)}
+.prl:last-child{border-bottom:0}
+.prl small{color:var(--mute)}
 /* rest bar */
 #rest{position:fixed;left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:30;transform:translateY(250%);transition:transform .2s;
   padding:12px 14px;border-radius:16px;background:var(--ink);color:var(--bg);box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -228,7 +275,7 @@ function seedState(){
 }
 function normalize(s){
   if(!s||!Array.isArray(s.plans)||!s.plans.length) return seedState();
-  s.settings=Object.assign({rest:60,unit:'kg',auto:true,sound:true,wake:false},s.settings||{});
+  s.settings=Object.assign({rest:60,unit:'kg',auto:true,sound:true,wake:false,goal:4},s.settings||{});
   s.history=Array.isArray(s.history)?s.history:[];
   if(!s.plans.find(p=>p.id===s.activePlan)) s.activePlan=s.plans[0].id;
   return s;
@@ -430,7 +477,9 @@ function render(){
     <button class="ib ${unlocked?'on':''}" data-act="lock" aria-label="${unlocked?'Lock editing':'Unlock editing'}">${unlocked?'🔓':'🔒'}</button>
     <button class="ib" data-act="menu" aria-label="Menu">☰</button>`;
   const secs=p.sections.filter(s=>filter==='all'||(filter==='today'?s.day===todayName():s.id===filter));
+  if(view==='progress'){ $('#app').innerHTML=tabsHTML()+progressHTML(); return; }
   $('#app').innerHTML=`
+    ${tabsHTML()}
     <div class="ov">
       <div class="ovt"><div class="big"><span id="ovDone"></span></div>
         <div style="text-align:right"><span class="mode ${unlocked?'edit':''}">${unlocked?'Editing':'View only'}</span><div class="sync" id="sync">${esc(syncMsg)}</div></div></div>
@@ -513,14 +562,19 @@ if(S.settings.wake) setWake(true);
 
 /* ---------- actions ---------- */
 function resetTicks(secId){
-  const p=plan(); const secs=secId?p.sections.filter(s=>s.id===secId):p.sections;
-  let done=0,total=0,vol=0;
-  secs.forEach(s=>s.exercises.forEach(x=>x.sets.forEach(st=>{
-    total++; if(st.done){ done++; vol+=(parseFloat(st.w)||0)*(parseFloat(st.r)||0); }
+  const p=plan(); const secs=secId?p.sections.filter(x=>x.id===secId):p.sections;
+  let entry=null;
+  if(!secId){ const b=buildSession(p); if(b.done>0) entry=Object.assign({t:Date.now(),plan:p.name},b); }
+  secs.forEach(x=>x.exercises.forEach(e=>e.sets.forEach(st=>{
     if(st.w!=='') st.pw=st.w; if(st.r!=='') st.pr=st.r; st.done=false;
   })));
-  if(!secId&&done>0){ S.history.unshift({t:Date.now(),plan:p.name,done,total,vol:Math.round(vol)}); S.history=S.history.slice(0,60); }
-  save(); render(); toast('Ticks cleared – your weights are kept');
+  let msg='Ticks cleared – your weights are kept';
+  if(entry){
+    S.history.unshift(entry); S.history=S.history.slice(0,250);
+    const prs=exPRs(S.history,0);
+    msg=prs.length?`🏆 New PR: ${prs[0].name} ${fmt(prs[0].w)}${unit()}${prs.length>1?' +'+(prs.length-1)+' more':''}`:'Session logged to Progress – weights are kept';
+  }
+  save(); render(); toast(msg);
 }
 function clonePlan(p,name){
   const c=JSON.parse(JSON.stringify(p)); c.id=uid(); c.name=name;
@@ -554,7 +608,7 @@ function openPlans(){
 }
 function openMenu(){
   sheet('Menu',[
-    {icon:'📈',label:'Workout history',fn:openHistory},
+    {icon:'📈',label:'Progress & analytics',fn:()=>{ view='progress'; render(); window.scrollTo(0,0); }},
     {icon:'⚙️',label:'Rest timer & units',fn:openPrefs},
     {icon:'💾',label:'Download backup',fn:exportData},
     {icon:'📋',label:'Copy data as JSON',fn:async()=>{ try{ await navigator.clipboard.writeText(JSON.stringify(S,null,2)); toast('Copied to clipboard'); }catch(e){ toast('Copy blocked – use Download backup'); } }},
@@ -568,11 +622,13 @@ function openPrefs(){
   modal({title:'Rest timer & units',fields:[
     {name:'rest',label:'Rest between sets (seconds)',type:'number',inputmode:'numeric',min:5,max:600,value:S.settings.rest},
     {name:'unit',label:'Weight unit',type:'select',value:S.settings.unit,options:[{v:'kg',t:'Kilograms (kg)'},{v:'lb',t:'Pounds (lb)'}]},
+    {name:'goal',label:'Weekly workout goal (sessions per week)',type:'number',inputmode:'numeric',min:1,max:7,value:S.settings.goal||4},
     {name:'auto',label:'Start rest timer when I tick a set',type:'checkbox',value:S.settings.auto},
     {name:'sound',label:'Beep and vibrate when rest ends',type:'checkbox',value:S.settings.sound},
     {name:'wake',label:'Keep screen on during workout',type:'checkbox',value:S.settings.wake}],
     onOk:v=>{ const r=parseInt(v.rest,10); if(!(r>=5&&r<=600)) return 'Enter a rest time between 5 and 600 seconds.';
-      Object.assign(S.settings,{rest:r,unit:v.unit,auto:v.auto,sound:v.sound,wake:v.wake}); save(); setWake(v.wake); render(); }});
+      const g=parseInt(v.goal,10); if(!(g>=1&&g<=7)) return 'Weekly goal must be between 1 and 7 sessions.';
+      Object.assign(S.settings,{rest:r,goal:g,unit:v.unit,auto:v.auto,sound:v.sound,wake:v.wake}); save(); setWake(v.wake); render(); }});
 }
 function openHistory(){
   const rows=S.history.length?S.history.slice(0,20).map(h=>{
@@ -630,8 +686,16 @@ document.addEventListener('click',e=>{
       break; }
     case 'reset':
       if(!requireUnlock()) return;
-      confirmBox('Reset ticks?','All ticks in this plan are cleared. Weights and reps stay so you can beat them next time, and they show as “Last time”.','Reset ticks',()=>resetTicks());
+      confirmBox('Reset ticks?','This logs your workout to Progress, then clears all ticks in this plan. Weights and reps stay so you can beat them next time (shown as “Last time”).','Reset ticks',()=>resetTicks());
       break;
+    case 'tab': view=t.dataset.v; render(); window.scrollTo(0,0); break;
+    case 'prange': prange=t.dataset.v; render(); break;
+    case 'pmetric': pmetric=t.dataset.v; render(); break;
+    case 'delsess':{
+      if(!requireUnlock()) return;
+      const tt=Number(t.dataset.t);
+      confirmBox('Delete this session?','It will be removed from your progress and charts.','Delete',()=>{ S.history=S.history.filter(h=>h.t!==tt); save(); render(); toast('Session deleted'); });
+      break; }
     case 'secdone':{
       if(!requireUnlock()) return;
       const c=counts(sec.exercises); if(!c.t){ toast('Add exercises to this section first'); break; }
@@ -688,6 +752,9 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&e.target.matches('.sh[data-act="toggle"]')){ e.preventDefault(); e.target.click(); }
 });
+document.addEventListener('change',e=>{
+  if(e.target.matches('[data-pex]')){ pex=e.target.value; render(); }
+});
 document.addEventListener('input',e=>{
   const el=e.target; if(!el.dataset||!el.dataset.f||el.readOnly) return;
   const row=el.closest('[data-i]'), exEl=el.closest('[data-ex]'); const fx=findEx(exEl.dataset.ex); if(!fx) return;
@@ -696,6 +763,161 @@ document.addEventListener('input',e=>{
   st[el.dataset.f]=v.trim(); save();
   row.querySelector('.hint').innerHTML=hintHTML(st);
 });
+
+/* ---------- progress & analytics ---------- */
+let view='workout', prange='week', pmetric='vol', pex='';
+const DAY=864e5;
+const num=v=>{ const n=parseFloat(v); return isNaN(n)?0:n; };
+const fk=n=>n>=10000?Math.round(n/1000)+'k':n>=1000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':String(Math.round(n));
+const sow=d=>{ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; };
+const addDays=(t,n)=>{ const d=new Date(t); d.setDate(d.getDate()+n); return d.getTime(); };
+const shortDate=t=>new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+const tabsHTML=()=>`<div class="tabs" role="tablist"><button class="tab ${view==='workout'?'on':''}" data-act="tab" data-v="workout" role="tab">Workout</button><button class="tab ${view==='progress'?'on':''}" data-act="tab" data-v="progress" role="tab">Progress</button></div>`;
+
+function buildSession(p){
+  let done=0,total=0,vol=0; const sec={}, ex=[];
+  p.sections.forEach(sc=>sc.exercises.forEach(x=>{
+    let n=0,v=0,top=0,topR=0;
+    x.sets.forEach(st=>{
+      total++;
+      if(st.done){ done++; n++; const w=num(st.w), r=num(st.r); v+=w*r; if(w>top||(w===top&&r>topR)){ top=w; topR=r; } }
+    });
+    if(n){ vol+=v; const k=sec[sc.name]||(sec[sc.name]={s:0,v:0}); k.s+=n; k.v+=Math.round(v); ex.push([x.name,n,top,topR,Math.round(v),sc.name]); }
+  }));
+  return {done,total,vol:Math.round(vol),sec,ex};
+}
+function exPRs(hist,i){
+  const h=hist[i]; if(!h||!h.ex) return [];
+  const older=hist.slice(i+1), out=[];
+  h.ex.forEach(e=>{
+    const name=e[0], top=e[2]; if(!(top>0)) return;
+    let prev=0, seen=false;
+    older.forEach(o=>(o.ex||[]).forEach(q=>{ if(q[0]===name){ seen=true; if(q[2]>prev) prev=q[2]; } }));
+    if(seen&&top>prev) out.push({name,w:top,r:e[3]});
+  });
+  return out;
+}
+function agg(list){ return list.reduce((a,h)=>({n:a.n+1,sets:a.sets+h.done,vol:a.vol+h.vol}),{n:0,sets:0,vol:0}); }
+function delta(c,p){
+  if(p==null) return '';
+  if(!p) return c?'<b class="up">new</b>':'';
+  const d=Math.round((c-p)/p*100);
+  return d===0?'<b>no change</b>':`<b class="${d>0?'up':'dn'}">${d>0?'▲':'▼'} ${Math.abs(d)}%</b>`;
+}
+function weekStreak(goal){
+  const counts={}; S.history.forEach(h=>{ const k=sow(h.t).getTime(); counts[k]=(counts[k]||0)+1; });
+  let w=sow(Date.now()).getTime(), streak=0;
+  if((counts[w]||0)<goal) w=sow(addDays(w,-7)).getTime();
+  while((counts[w]||0)>=goal){ streak++; w=sow(addDays(w,-7)).getTime(); }
+  return streak;
+}
+function bounds(){
+  const now=Date.now(), w0=sow(now).getTime();
+  if(prange==='week') return {from:w0,to:addDays(w0,7),pf:addDays(w0,-7),pt:w0,title:'This week',vs:'last week'};
+  if(prange==='month') return {from:addDays(now,-30),to:now+1,pf:addDays(now,-60),pt:addDays(now,-30),title:'Last 30 days',vs:'the 30 days before'};
+  if(prange==='quarter') return {from:addDays(now,-90),to:now+1,pf:addDays(now,-180),pt:addDays(now,-90),title:'Last 90 days',vs:'the 90 days before'};
+  return {from:0,to:now+1,pf:null,pt:null,title:'All time',vs:''};
+}
+function buckets(){
+  const H=S.history, val=h=>pmetric==='sets'?h.done:h.vol, now=Date.now(), w0=sow(now).getTime(), out=[];
+  const sum=(a,z)=>H.filter(h=>h.t>=a&&h.t<z).reduce((t,h)=>t+val(h),0);
+  if(prange==='week'){
+    const L=['M','T','W','T','F','S','S'], ti=(new Date().getDay()+6)%7;
+    for(let i=0;i<7;i++) out.push({l:L[i],v:sum(addDays(w0,i),addDays(w0,i+1)),cur:i===ti});
+    return {unit:'per day',bars:out};
+  }
+  if(prange==='month'||prange==='quarter'){
+    const n=prange==='month'?5:13;
+    for(let i=n-1;i>=0;i--){ const a=sow(addDays(w0,-7*i)).getTime(); out.push({l:(n<6||i%3===0)?shortDate(a):'',v:sum(a,addDays(a,7)),cur:i===0}); }
+    return {unit:'per week',bars:out};
+  }
+  const first=H.length?Math.min(...H.map(h=>h.t)):now, end=new Date();
+  let m=new Date(end.getFullYear(),end.getMonth()-11,1); const fm=new Date(new Date(first).getFullYear(),new Date(first).getMonth(),1); if(m<fm) m=fm;
+  while(m<=end){
+    const a=m.getTime(), nx=new Date(m.getFullYear(),m.getMonth()+1,1);
+    out.push({l:m.toLocaleDateString(undefined,{month:'short'}),v:sum(a,nx.getTime()),cur:m.getMonth()===end.getMonth()&&m.getFullYear()===end.getFullYear()});
+    m=nx;
+  }
+  return {unit:'per month',bars:out};
+}
+function barsHTML(b){
+  const mx=Math.max(1,...b.bars.map(x=>x.v));
+  return `<div class="bars">${b.bars.map(x=>{ const h=Math.round(x.v/mx*104); return `<div class="bc ${x.cur?'cur':''}"><span class="bv">${x.v?fk(x.v):''}</span><div class="bb ${x.v?'':'z'}" style="height:${x.v?Math.max(h,4):3}px"></div><span class="bl">${esc(x.l)}</span></div>`; }).join('')}</div>`;
+}
+function muscleAgg(list){
+  const m={};
+  list.forEach(h=>Object.entries(h.sec||{}).forEach(([n,v])=>{ const k=n.trim().toLowerCase(); const o=m[k]||(m[k]={name:n,s:0,v:0}); o.s+=v.s; o.v+=v.v; }));
+  return Object.values(m).sort((a,b)=>(pmetric==='sets'?b.s-a.s:b.v-a.v)||b.s-a.s);
+}
+function lineChart(pts,suffix){
+  const W=320,Hh=150,pl=38,pr=12,pt=14,pb=26;
+  const ys=pts.map(p=>p.y); let mn=Math.min(...ys), mx=Math.max(...ys); const rawMn=mn, rawMx=mx;
+  if(mn===mx){ mn-=1; mx+=1; } const pad=(mx-mn)*.18; mn-=pad; mx+=pad;
+  const X=i=>pl+(pts.length===1?(W-pl-pr)/2:i*(W-pl-pr)/(pts.length-1)), Y=y=>pt+(1-(y-mn)/(mx-mn))*(Hh-pt-pb);
+  const path=pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(' ');
+  const grid=[rawMx].concat(rawMn!==rawMx?[rawMn]:[]).map(v=>`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${pl-6}" y="${(Y(v)+3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`).join('');
+  const dots=pts.map((p,i)=>`<circle class="${p.pr?'pr':''}" cx="${X(i).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="${p.pr?5:4}"/>`).join('');
+  return `<svg class="lc" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Progress chart">${grid}<path class="ln" d="${path}"/>${dots}
+    <text x="${pl}" y="${Hh-6}" text-anchor="start">${shortDate(pts[0].t)}</text><text x="${W-pr}" y="${Hh-6}" text-anchor="end">${shortDate(pts[pts.length-1].t)}</text></svg>`;
+}
+function exerciseHTML(){
+  const names=[]; S.history.forEach(h=>(h.ex||[]).forEach(e=>{ if(!names.includes(e[0])) names.push(e[0]); }));
+  if(!names.length) return `<div class="panel"><h3>Exercise progress</h3><p class="mute">Strength charts appear after your next logged workout.</p></div>`;
+  if(!pex||!names.includes(pex)) pex=names[0];
+  let mx=0; const all=[];
+  for(let i=S.history.length-1;i>=0;i--){ const h=S.history[i]; (h.ex||[]).forEach(e=>{ if(e[0]===pex){ all.push({t:h.t,w:e[2],r:e[3],pr:all.length>0&&e[2]>mx&&e[2]>0}); if(e[2]>mx) mx=e[2]; } }); }
+  const useReps=all.every(p=>p.w===0), pts=all.slice(-20).map(p=>({t:p.t,y:useReps?p.r:p.w,pr:p.pr,w:p.w,r:p.r}));
+  const u=useReps?' reps':unit();
+  let best=pts[0]; pts.forEach(p=>{ if(p.y>best.y||(p.y===best.y&&p.r>best.r)) best=p; });
+  let e1=0; all.forEach(p=>{ if(p.w>0&&p.r>0) e1=Math.max(e1,p.w*(1+p.r/30)); });
+  const ch=pts[pts.length-1].y-pts[0].y;
+  return `<div class="panel"><h3>Exercise progress</h3>
+    <select class="sel" data-pex aria-label="Choose exercise">${names.map(n=>`<option value="${esc(n)}" ${n===pex?'selected':''}>${esc(n)}</option>`).join('')}</select>
+    ${pts.length>1?lineChart(pts):`<p class="mute">Only one session logged so far. Do it again to see a line.</p>`}
+    <div class="st3"><div><small>Best set</small><b>${useReps?fmt(best.y)+' reps':fmt(best.w)+unit()+' × '+fmt(best.r)}</b></div>
+      <div><small>Est. 1RM</small><b>${e1?fmt(Math.round(e1*10)/10)+unit():'–'}</b></div>
+      <div><small>Change</small><b class="${ch>0?'up':ch<0?'dn':''}" style="color:${ch>0?'var(--good)':ch<0?'var(--bad)':'inherit'}">${pts.length>1?(ch>0?'▲ +':ch<0?'▼ ':'')+fmt(ch)+(useReps?'':unit()):'–'}</b></div></div>
+    <p class="mute">Top ${useReps?'reps':'weight'} per session · last ${pts.length} session${pts.length>1?'s':''}. Green dots are personal records.</p></div>`;
+}
+function progressHTML(){
+  const H=S.history, goal=S.settings.goal||4;
+  if(!H.length) return `<div class="panel"><h3>No sessions yet</h3>
+    <p class="mute">Do your workout, then tap <b>Reset ticks</b> on the Workout tab. That logs the session here and clears your ticks for next time.</p>
+    <p class="mute">You’ll get weekly and monthly totals, sets per muscle group, strength charts per exercise, personal records and a weekly streak.</p>
+    <button class="btn pri" style="width:100%;margin-top:12px" data-act="tab" data-v="workout">Back to workout</button></div>`;
+  const b=bounds(), cur=H.filter(h=>h.t>=b.from&&h.t<b.to), prev=b.pf==null?null:H.filter(h=>h.t>=b.pf&&h.t<b.pt);
+  const a=agg(cur), pa=prev?agg(prev):null;
+  const w0=sow(Date.now()).getTime(), sw=H.filter(h=>h.t>=w0).length, streak=weekStreak(goal);
+  const ranges=[['week','Week'],['month','30 days'],['quarter','90 days'],['all','All time']];
+  const bk=buckets(), muscle=muscleAgg(cur), mTot=muscle.reduce((t,x)=>t+(pmetric==='sets'?x.s:x.v),0), mMax=Math.max(1,...muscle.map(x=>pmetric==='sets'?x.s:x.v));
+  const hit=new Set(muscle.map(x=>x.name.trim().toLowerCase()));
+  const missing=plan().sections.map(x=>x.name).filter(n=>!hit.has(n.trim().toLowerCase()));
+  const prs=[]; H.forEach((h,i)=>{ if(h.t>=b.from&&h.t<b.to) exPRs(H,i).forEach(x=>prs.push(Object.assign({t:h.t},x))); });
+  const U=unit();
+  return `
+  <div class="panel" style="margin-top:0"><div class="prow"><h3>Weekly goal</h3><b>${sw} / ${goal} sessions</b></div>
+    <div class="bar ${sw>=goal?'full':''}"><i style="width:${Math.min(100,sw/goal*100)}%"></i></div>
+    <p class="mute">${streak?`🔥 ${streak}-week streak`:'Hit your goal this week to start a streak'} · change the goal in ☰ → Rest timer &amp; units</p></div>
+  <div class="chips" style="padding-top:12px">${ranges.map(r=>`<button class="chip ${prange===r[0]?'on':''}" data-act="prange" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+  <div class="pg">
+    <div class="pc"><small>Sessions</small><span class="big">${a.n}</span>${delta(a.n,pa&&pa.n)}</div>
+    <div class="pc"><small>Sets done</small><span class="big">${a.sets}</span>${delta(a.sets,pa&&pa.sets)}</div>
+    <div class="pc"><small>Volume (${U})</small><span class="big">${fk(a.vol)}</span>${delta(a.vol,pa&&pa.vol)}</div>
+    <div class="pc"><small>Avg per session (${U})</small><span class="big">${a.n?fk(a.vol/a.n):'–'}</span><b>${b.vs?'vs '+esc(b.vs):''}</b></div>
+  </div>
+  <div class="panel"><div class="prow"><h3>${pmetric==='sets'?'Sets':'Volume'} ${bk.unit}</h3><span class="mute">${esc(b.title)}</span></div>
+    <div class="seg"><button class="chip ${pmetric==='vol'?'on':''}" data-act="pmetric" data-v="vol">Volume</button><button class="chip ${pmetric==='sets'?'on':''}" data-act="pmetric" data-v="sets">Sets</button></div>
+    ${barsHTML(bk)}</div>
+  <div class="panel"><h3>Muscle groups</h3><p class="mute">${esc(b.title)} · ${pmetric==='sets'?'sets done':'volume ('+U+')'} per section</p>
+    ${muscle.length?muscle.map(x=>{ const v=pmetric==='sets'?x.s:x.v; return `<div class="mr"><span>${esc(x.name)}</span><div class="mt"><i style="width:${Math.round(v/mMax*100)}%"></i></div><em>${pmetric==='sets'?x.s+' sets':fk(x.v)} · ${mTot?Math.round(v/mTot*100):0}%</em></div>`; }).join('')
+      :`<p class="mute" style="margin-top:10px">${cur.length?'Muscle-group detail is recorded for workouts logged from now on.':'No sessions in this period.'}</p>`}
+    ${muscle.length&&missing.length?`<p class="mute" style="margin-top:12px">Not trained in this period: ${missing.map(esc).join(', ')}</p>`:''}</div>
+  ${exerciseHTML()}
+  ${prs.length?`<div class="panel"><h3>Personal records</h3><p class="mute">${esc(b.title)}</p>${prs.slice(0,6).map(x=>`<div class="prl">🏆 <b>${esc(x.name)}</b> ${fmt(x.w)}${U}${x.r?' × '+fmt(x.r):''} <small>· ${shortDate(x.t)}</small></div>`).join('')}</div>`:''}
+  <div class="panel"><h3>Recent sessions</h3>
+    ${H.slice(0,6).map((h,i)=>{ const n=exPRs(H,i).length; return `<div class="srow"><div class="a"><b>${new Date(h.t).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})}${n?` · 🏆 ${n}`:''}</b><small>${esc(h.plan)} · ${h.done}/${h.total} sets</small></div><div class="r">${fk(h.vol)} ${U}</div>${unlocked?`<button class="ib" data-act="delsess" data-t="${h.t}" aria-label="Delete session">🗑</button>`:''}</div>`; }).join('')}
+  </div>`;
+}
 
 /* ---------- drag & drop (touch + mouse) ---------- */
 document.addEventListener('pointerdown',e=>{
