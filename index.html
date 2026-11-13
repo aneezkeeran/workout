@@ -74,7 +74,7 @@ h1,h2,h3{margin:0;font-family:var(--head);font-weight:700;letter-spacing:.01em}
 
 /* sections */
 .sec{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
-.sh{display:flex;align-items:center;gap:10px;padding:12px 8px 12px 14px;cursor:pointer;user-select:none}
+.sh{display:flex;align-items:center;gap:8px;padding:12px 8px 12px 14px;cursor:pointer;user-select:none}
 .sh .t{flex:1;min-width:0}
 .sh h2{font-size:26px;line-height:1.1}
 .sh small{color:var(--mute);font-size:13px}
@@ -113,6 +113,17 @@ h1,h2,h3{margin:0;font-family:var(--head);font-weight:700;letter-spacing:.01em}
 .addsec{display:block;width:100%;margin-top:14px;min-height:52px;border:1.5px dashed var(--accent);border-radius:16px;color:var(--accent);font-weight:600}
 .empty{text-align:center;color:var(--mute);padding:36px 12px}
 
+.grip{flex:none;width:30px;height:44px;display:grid;place-items:center;color:var(--mute);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;border-radius:8px}
+.ex .grip{width:28px;height:36px}
+.schk{flex:none;width:40px;height:40px;border-radius:12px;border:2px solid var(--line);display:grid;place-items:center;font-size:20px;font-weight:700;color:transparent;background:var(--card);transition:background .12s,border-color .12s}
+.schk.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.schk.part{border-color:var(--accent);color:var(--accent)}
+.dragging{position:relative;z-index:15;background:var(--card);box-shadow:0 10px 28px rgba(0,0,0,.28);border-radius:14px}
+.sec.dragging{border-color:var(--accent)}
+.sorting .sb{display:none}
+body.dragging-ex .sec{overflow:visible}
+body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
+.dropline{position:fixed;height:4px;border-radius:4px;background:var(--accent);z-index:40;pointer-events:none}
 /* rest bar */
 #rest{position:fixed;left:0;right:0;bottom:0;z-index:30;transform:translateY(110%);transition:transform .2s;
   padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg)}
@@ -198,6 +209,7 @@ const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const newSets=n=>Array.from({length:n},()=>({w:'',r:'',pw:'',pr:'',done:false}));
+const GRIP='<svg width="16" height="20" viewBox="0 0 16 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="12" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="12" cy="16" r="1.6"/></svg>';
 const fmt=n=>String(Math.round(n*100)/100);
 
 function seedState(){
@@ -383,7 +395,7 @@ function setHTML(s,i){
 }
 function exHTML(x){
   return `<article class="ex" data-ex="${x.id}">
-    <div class="eh"><span class="en">${esc(x.name)}</span>${x.url?`<a class="vid" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" aria-label="Watch video for ${esc(x.name)}">▶ ${linkLabel(x.url)}</a>`:''}<span class="ec" data-ecnt></span>
+    <div class="eh">${unlocked?`<button class="grip" data-act="grab" data-drag="ex" aria-label="Drag to reorder exercise">${GRIP}</button>`:''}<span class="en">${esc(x.name)}</span>${x.url?`<a class="vid" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" aria-label="Watch video for ${esc(x.name)}">▶ ${linkLabel(x.url)}</a>`:''}<span class="ec" data-ecnt></span>
       ${unlocked?`<button class="ib" data-act="exmenu" aria-label="Exercise options">⋯</button>`:''}</div>
     ${x.sets.map(setHTML).join('')}
     ${unlocked?`<div class="ef"><button class="btn" data-act="addset">+ Set</button><button class="btn" data-act="delset">− Set</button></div>`:''}
@@ -392,7 +404,9 @@ function exHTML(x){
 function secHTML(s){
   return `<section class="sec ${s.collapsed?'closed':''}" data-sec="${s.id}">
     <div class="sh" data-act="toggle" role="button" tabindex="0" aria-expanded="${!s.collapsed}">
+      ${unlocked?`<button class="grip" data-act="grab" data-drag="sec" aria-label="Drag to reorder section">${GRIP}</button>`:''}
       <div class="t"><h2>${esc(s.name)}</h2><small data-scnt></small><div class="bar"><i data-sbar></i></div></div>
+      <button class="schk" data-act="secdone" data-schk aria-label="Mark whole section done" aria-pressed="false">✓</button>
       ${unlocked?`<button class="ib" data-act="secmenu" aria-label="Section options">⋯</button>`:''}
       <span class="car">▾</span>
     </div>
@@ -406,6 +420,7 @@ function render(){
   if(filter!=='all'&&!p.sections.find(s=>s.id===filter)) filter='all';
   $('#top').innerHTML=`
     <button class="plan" data-act="plans" aria-label="Choose coach plan"><small>Coach plan</small><b>${esc(p.name)} ▾</b></button>
+    ${unlocked?`<button class="ib" data-act="planmenu" aria-label="Edit plan: rename or delete">✎</button>`:''}
     <button class="ib ${unlocked?'on':''}" data-act="lock" aria-label="${unlocked?'Lock editing':'Unlock editing'}">${unlocked?'🔓':'🔒'}</button>
     <button class="ib" data-act="menu" aria-label="Menu">☰</button>`;
   const secs=p.sections.filter(s=>filter==='all'||s.id===filter);
@@ -435,6 +450,8 @@ function updateProgress(){
     el.querySelector('[data-scnt]').textContent=`${s.exercises.length} exercises · ${c.d}/${c.t} sets`;
     el.querySelector('[data-sbar]').style.width=(c.t?c.d/c.t*100:0)+'%';
     el.querySelector('.sh .bar').classList.toggle('full',c.t>0&&c.d===c.t);
+    const ck=el.querySelector('[data-schk]');
+    if(ck){ const all=c.t>0&&c.d===c.t, part=c.d>0&&!all; ck.classList.toggle('on',all); ck.classList.toggle('part',part); ck.textContent=part?'–':'✓'; ck.setAttribute('aria-pressed',String(all)); }
     s.exercises.forEach(x=>{
       const xe=el.querySelector(`[data-ex="${x.id}"]`); if(!xe) return;
       const d=x.sets.filter(q=>q.done).length;
@@ -503,21 +520,29 @@ function clonePlan(p,name){
   c.sections.forEach(s=>{ s.id=uid(); s.exercises.forEach(x=>{ x.id=uid(); x.sets.forEach(st=>{ st.done=false; }); }); });
   return c;
 }
-function openPlans(){
-  const items=S.plans.map(p=>({icon:p.id===S.activePlan?'✓':'',label:p.name,on:p.id===S.activePlan,fn:()=>{ S.activePlan=p.id; filter='all'; save(); render(); window.scrollTo(0,0); }}));
-  if(unlocked){
-    items.push({icon:'＋',label:'New coach plan',fn:()=>modal({title:'New coach plan',
+function planItems(){
+  return [
+    {icon:'✎',label:'Rename this plan',fn:()=>modal({title:'Rename plan',fields:[{name:'name',label:'Plan name',value:plan().name}],
+      onOk:v=>{ if(!v.name) return 'Name can’t be empty.'; plan().name=v.name; save(); render(); toast('Plan renamed'); }})},
+    {icon:'＋',label:'New coach plan',fn:()=>modal({title:'New coach plan',
       fields:[{name:'name',label:'Plan name',value:''},
         {name:'from',label:'Start from',type:'select',value:'blank',options:[{v:'blank',t:'Empty plan'},{v:'copy',t:'Copy of "'+plan().name+'"'}]}],
       onOk:v=>{ if(!v.name) return 'Give the plan a name.';
         const np=v.from==='copy'?clonePlan(plan(),v.name):{id:uid(),name:v.name,sections:[]};
-        S.plans.push(np); S.activePlan=np.id; filter='all'; save(); render(); }}) });
-    items.push({icon:'✎',label:'Rename this plan',fn:()=>modal({title:'Rename plan',fields:[{name:'name',label:'Plan name',value:plan().name}],
-      onOk:v=>{ if(!v.name) return 'Name can’t be empty.'; plan().name=v.name; save(); render(); }})});
-    items.push({icon:'⧉',label:'Duplicate this plan',fn:()=>{ const c=clonePlan(plan(),plan().name+' (copy)'); S.plans.push(c); S.activePlan=c.id; save(); render(); toast('Plan duplicated'); }});
-    if(S.plans.length>1) items.push({icon:'🗑',label:'Delete this plan',danger:true,fn:()=>confirmBox('Delete plan?',`“${esc(plan().name)}” and all its weights will be removed. This can’t be undone.`,'Delete plan',()=>{
-      S.plans=S.plans.filter(p=>p.id!==S.activePlan); S.activePlan=S.plans[0].id; save(); render(); toast('Plan deleted'); })});
-  } else items.push({icon:'🔒',label:'Unlock to add or edit plans',fn:openUnlock});
+        S.plans.push(np); S.activePlan=np.id; filter='all'; save(); render(); }})},
+    {icon:'⧉',label:'Duplicate this plan',fn:()=>{ const c=clonePlan(plan(),plan().name+' (copy)'); S.plans.push(c); S.activePlan=c.id; save(); render(); toast('Plan duplicated'); }},
+    {icon:'🗑',label:'Delete this plan',danger:true,fn:()=>confirmBox('Delete plan?',
+      `“${esc(plan().name)}” and all its weights will be removed. This can’t be undone.`+(S.plans.length===1?' An empty plan will be created so you can start again.':''),
+      'Delete plan',()=>{
+        S.plans=S.plans.filter(q=>q.id!==S.activePlan);
+        if(!S.plans.length) S.plans.push({id:uid(),name:'New plan',sections:[]});
+        S.activePlan=S.plans[0].id; filter='all'; save(); render(); toast('Plan deleted'); })}
+  ];
+}
+function openPlans(){
+  const items=S.plans.map(p=>({icon:p.id===S.activePlan?'✓':'',label:p.name,on:p.id===S.activePlan,fn:()=>{ S.activePlan=p.id; filter='all'; save(); render(); window.scrollTo(0,0); }}));
+  if(unlocked) items.push(...planItems());
+  else items.push({icon:'🔒',label:'Unlock to add or edit plans',fn:openUnlock});
   sheet('Coach plans',items);
 }
 function openMenu(){
@@ -578,6 +603,7 @@ document.addEventListener('click',e=>{
   const fx=exEl&&findEx(exEl.dataset.ex);
   switch(act){
     case 'plans': openPlans(); break;
+    case 'planmenu': if(requireUnlock()) sheet(plan().name,planItems()); break;
     case 'menu': openMenu(); break;
     case 'lock': unlocked?lockNow():openUnlock(); break;
     case 'filter': filter=t.dataset.v; render(); break;
@@ -599,6 +625,14 @@ document.addEventListener('click',e=>{
       if(!requireUnlock()) return;
       confirmBox('Reset ticks?','All ticks in this plan are cleared. Weights and reps stay so you can beat them next time, and they show as “Last time”.','Reset ticks',()=>resetTicks());
       break;
+    case 'secdone':{
+      if(!requireUnlock()) return;
+      const c=counts(sec.exercises); if(!c.t){ toast('Add exercises to this section first'); break; }
+      const val=c.d!==c.t;
+      sec.exercises.forEach(x=>x.sets.forEach(st=>{ st.done=val; }));
+      save(); render();
+      if(val){ const a=counts(plan().sections.flatMap(q=>q.exercises)); toast(a.d===a.t?'Workout complete! Tap “Reset ticks” to log it.':sec.name+' done ✓'); }
+      break; }
     case 'addsec':
       modal({title:'New section',fields:[{name:'name',label:'Section name (e.g. Shoulders)'}],ok:'Add section',
         onOk:v=>{ if(!v.name) return 'Give the section a name.'; const s={id:uid(),name:v.name,collapsed:false,exercises:[]}; plan().sections.push(s); filter='all'; save(); render(); setTimeout(()=>document.querySelector(`[data-sec="${s.id}"]`)?.scrollIntoView({behavior:'smooth'}),50); }});
@@ -652,6 +686,76 @@ document.addEventListener('input',e=>{
   st[el.dataset.f]=v.trim(); save();
   row.querySelector('.hint').innerHTML=hintHTML(st);
 });
+
+/* ---------- drag & drop (touch + mouse) ---------- */
+document.addEventListener('pointerdown',e=>{
+  const h=e.target.closest('[data-drag]'); if(!h||!unlocked) return;
+  if(e.pointerType==='mouse'&&e.button!==0) return;
+  startDrag(e,h);
+});
+function secTarget(el,y){
+  const sibs=[...document.querySelectorAll('[data-sec]')].filter(x=>x!==el);
+  if(!sibs.length) return null;
+  for(const sb of sibs){ const r=sb.getBoundingClientRect(); if(y<r.top+r.height/2) return {before:sb.dataset.sec,y:r.top-6,x:r.left,w:r.width}; }
+  const r=sibs[sibs.length-1].getBoundingClientRect(); return {before:null,y:r.bottom+6,x:r.left,w:r.width};
+}
+function exTarget(el,y){
+  for(const sEl of document.querySelectorAll('[data-sec]')){
+    const r=sEl.getBoundingClientRect(); if(!r.height) continue;
+    if(y<r.top-6||y>r.bottom+6) continue;
+    const closed=sEl.classList.contains('closed');
+    const exs=closed?[]:[...sEl.querySelectorAll('[data-ex]')].filter(x=>x!==el);
+    for(const x of exs){ const xr=x.getBoundingClientRect(); if(y<xr.top+xr.height/2) return {sec:sEl.dataset.sec,before:x.dataset.ex,y:xr.top,x:xr.left,w:xr.width}; }
+    if(exs.length){ const xr=exs[exs.length-1].getBoundingClientRect(); return {sec:sEl.dataset.sec,before:null,y:xr.bottom,x:xr.left,w:xr.width}; }
+    const hr=sEl.querySelector('.sh').getBoundingClientRect(); return {sec:sEl.dataset.sec,before:null,y:hr.bottom,x:hr.left,w:hr.width};
+  }
+  return null;
+}
+function startDrag(e,h){
+  e.preventDefault();
+  const kind=h.dataset.drag;
+  const el=h.closest(kind==='sec'?'[data-sec]':'[data-ex]'); if(!el) return;
+  const id=kind==='sec'?el.dataset.sec:el.dataset.ex;
+  try{ h.setPointerCapture(e.pointerId); }catch(err){}
+  let lastY=e.clientY, dy=0, target=null, raf=0, alive=true;
+  const line=document.createElement('div'); line.className='dropline'; line.hidden=true; document.body.appendChild(line);
+  document.body.classList.add('dragging-'+kind); if(kind==='sec') document.body.classList.add('sorting');
+  el.classList.add('dragging'); if(navigator.vibrate) navigator.vibrate(12);
+  const frame=()=>{
+    if(!alive) return;
+    if(lastY<90) window.scrollBy(0,-14); else if(lastY>window.innerHeight-90) window.scrollBy(0,14);
+    const base=el.getBoundingClientRect().top-dy;
+    dy=lastY-base-22; el.style.transform=`translateY(${dy}px)`;
+    target=kind==='sec'?secTarget(el,lastY):exTarget(el,lastY);
+    if(target){ line.hidden=false; line.style.left=target.x+'px'; line.style.width=target.w+'px'; line.style.top=(target.y-2)+'px'; } else line.hidden=true;
+    raf=requestAnimationFrame(frame);
+  };
+  const mv=ev=>{ lastY=ev.clientY; };
+  const end=ev=>{
+    alive=false; cancelAnimationFrame(raf);
+    h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',end); h.removeEventListener('pointercancel',end);
+    line.remove(); el.classList.remove('dragging'); el.style.transform='';
+    document.body.classList.remove('dragging-'+kind,'sorting');
+    if(target&&ev.type==='pointerup') applyDrop(kind,id,target); else render();
+  };
+  h.addEventListener('pointermove',mv); h.addEventListener('pointerup',end); h.addEventListener('pointercancel',end);
+  frame();
+}
+function applyDrop(kind,id,t){
+  const p=plan();
+  if(kind==='sec'){
+    const i=p.sections.findIndex(x=>x.id===id); if(i<0) return render();
+    const [moved]=p.sections.splice(i,1);
+    const j=t.before?p.sections.findIndex(x=>x.id===t.before):p.sections.length;
+    p.sections.splice(j<0?p.sections.length:j,0,moved);
+  }else{
+    const f=findEx(id); if(!f) return render();
+    f.sec.exercises.splice(f.i,1);
+    const to=findSec(t.sec); const j=t.before?to.exercises.findIndex(x=>x.id===t.before):to.exercises.length;
+    to.exercises.splice(j<0?to.exercises.length:j,0,f.ex); to.collapsed=false;
+  }
+  save(); render();
+}
 
 render();
 loadServer();
