@@ -31,7 +31,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-padding-top:84px}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.4 var(--body);
-  padding-bottom:calc(120px + env(safe-area-inset-bottom,0px));
+  padding-bottom:calc(200px + env(safe-area-inset-bottom,0px));
   padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none}
@@ -52,7 +52,8 @@ h1,h2,h3{margin:0;font-family:var(--head);font-weight:700;letter-spacing:.01em}
 .ov{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
 .ovt{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
 .ovt .big{font:700 40px/1 var(--head)}
-.ovt .big span{font-size:20px;color:var(--mute)}
+.ovt .big{white-space:nowrap}
+.ovt .big span{font-size:16px;color:var(--mute)}
 .mode{font-size:13px;font-weight:600;padding:5px 10px;border-radius:99px;background:var(--chip);color:var(--mute)}
 .sync{font-size:12px;color:var(--mute);margin-top:5px;min-height:16px}
 .mode.edit{background:var(--accent-soft);color:var(--accent)}
@@ -115,6 +116,8 @@ h1,h2,h3{margin:0;font-family:var(--head);font-weight:700;letter-spacing:.01em}
 
 .grip{flex:none;width:30px;height:44px;display:grid;place-items:center;color:var(--mute);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;border-radius:8px}
 .ex .grip{width:28px;height:36px}
+.day{flex:none;font-size:13px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--chip);color:var(--mute)}
+.day.today{background:var(--accent);color:var(--accent-ink)}
 .schk{flex:none;width:40px;height:40px;border-radius:12px;border:2px solid var(--line);display:grid;place-items:center;font-size:20px;font-weight:700;color:transparent;background:var(--card);transition:background .12s,border-color .12s}
 .schk.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .schk.part{border-color:var(--accent);color:var(--accent)}
@@ -125,8 +128,8 @@ body.dragging-ex .sec{overflow:visible}
 body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
 .dropline{position:fixed;height:4px;border-radius:4px;background:var(--accent);z-index:40;pointer-events:none}
 /* rest bar */
-#rest{position:fixed;left:0;right:0;bottom:0;z-index:30;transform:translateY(110%);transition:transform .2s;
-  padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg)}
+#rest{position:fixed;left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:30;transform:translateY(250%);transition:transform .2s;
+  padding:12px 14px;border-radius:16px;background:var(--ink);color:var(--bg);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 #rest.show{transform:none}
 #rest .row{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
 #rest .time{font:700 44px/1 var(--head);min-width:92px;font-variant-numeric:tabular-nums}
@@ -137,12 +140,11 @@ body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
 #rest.done .time{color:#6ee79a}
 
 /* sheets & modals */
-.bg{position:fixed;inset:0;z-index:50;background:rgba(10,14,24,.5);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.bg{position:fixed;inset:0;z-index:50;background:rgba(10,14,24,.5);display:flex;align-items:center;justify-content:center;padding:16px 16px calc(90px + env(safe-area-inset-bottom,0px));animation:fade .15s}
 @keyframes fade{from{opacity:0}}
-.md,.sheet{background:var(--card);width:100%;max-width:520px;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));
-  border-radius:20px 20px 0 0;max-height:88vh;overflow:auto;animation:up .18s}
+.md,.sheet{background:var(--card);width:100%;max-width:520px;padding:18px 16px 16px;
+  border-radius:20px;max-height:calc(100vh - 140px);max-height:calc(100dvh - 140px);overflow:auto;animation:up .18s}
 @keyframes up{from{transform:translateY(24px);opacity:.6}}
-@media (min-width:600px){.bg{align-items:center}.md,.sheet{border-radius:20px}}
 .md h3,.sheet h3{font-size:26px;margin-bottom:10px}
 .md p{color:var(--mute);margin:0 0 12px}
 .md label.f{display:block;margin-bottom:12px;font-size:14px;font-weight:600}
@@ -161,7 +163,7 @@ body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
 .si span.ic{width:26px;text-align:center}
 .hist{font-size:14px;border-bottom:1px solid var(--line);padding:9px 0;display:flex;justify-content:space-between;gap:10px}
 .hist small{color:var(--mute);display:block}
-#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;
+#toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:500;z-index:60;max-width:90vw;text-align:center;transition:.2s}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -209,6 +211,9 @@ const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const newSets=n=>Array.from({length:n},()=>({w:'',r:'',pw:'',pr:'',done:false}));
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const todayName=()=>['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+const dayOptions=()=>[{v:'',t:'No day'},...DAYS.map(d=>({v:d,t:d}))];
 const GRIP='<svg width="16" height="20" viewBox="0 0 16 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="12" cy="10" r="1.6"/><circle cx="4" cy="16" r="1.6"/><circle cx="12" cy="16" r="1.6"/></svg>';
 const fmt=n=>String(Math.round(n*100)/100);
 
@@ -406,6 +411,7 @@ function secHTML(s){
     <div class="sh" data-act="toggle" role="button" tabindex="0" aria-expanded="${!s.collapsed}">
       ${unlocked?`<button class="grip" data-act="grab" data-drag="sec" aria-label="Drag to reorder section">${GRIP}</button>`:''}
       <div class="t"><h2>${esc(s.name)}</h2><small data-scnt></small><div class="bar"><i data-sbar></i></div></div>
+      ${s.day?`<span class="day ${s.day===todayName()?'today':''}" aria-label="${esc(s.day)}">${esc(s.day.slice(0,3))}</span>`:''}
       <button class="schk" data-act="secdone" data-schk aria-label="Mark whole section done" aria-pressed="false">✓</button>
       ${unlocked?`<button class="ib" data-act="secmenu" aria-label="Section options">⋯</button>`:''}
       <span class="car">▾</span>
@@ -417,13 +423,13 @@ function secHTML(s){
 }
 function render(){
   const p=plan();
-  if(filter!=='all'&&!p.sections.find(s=>s.id===filter)) filter='all';
+  if(filter!=='all'&&filter!=='today'&&!p.sections.find(s=>s.id===filter)) filter='all';
   $('#top').innerHTML=`
     <button class="plan" data-act="plans" aria-label="Choose coach plan"><small>Coach plan</small><b>${esc(p.name)} ▾</b></button>
     ${unlocked?`<button class="ib" data-act="planmenu" aria-label="Edit plan: rename or delete">✎</button>`:''}
     <button class="ib ${unlocked?'on':''}" data-act="lock" aria-label="${unlocked?'Lock editing':'Unlock editing'}">${unlocked?'🔓':'🔒'}</button>
     <button class="ib" data-act="menu" aria-label="Menu">☰</button>`;
-  const secs=p.sections.filter(s=>filter==='all'||s.id===filter);
+  const secs=p.sections.filter(s=>filter==='all'||(filter==='today'?s.day===todayName():s.id===filter));
   $('#app').innerHTML=`
     <div class="ov">
       <div class="ovt"><div class="big"><span id="ovDone"></span></div>
@@ -433,9 +439,10 @@ function render(){
     </div>
     <div class="chips" role="tablist">
       <button class="chip ${filter==='all'?'on':''}" data-act="filter" data-v="all">All</button>
+      ${p.sections.some(s=>s.day)?`<button class="chip ${filter==='today'?'on':''}" data-act="filter" data-v="today">Today · ${todayName().slice(0,3)}</button>`:''}
       ${p.sections.map(s=>`<button class="chip ${filter===s.id?'on':''}" data-act="filter" data-v="${s.id}">${esc(s.name)}</button>`).join('')}
     </div>
-    ${secs.map(secHTML).join('')||`<div class="empty">${unlocked?'This plan has no sections yet. Add the first one below.':'This plan has no sections yet.'}</div>`}
+    ${secs.map(secHTML).join('')||`<div class="empty">${filter==='today'?'No workout is set for today. Use a section’s ⋯ menu → Set day.':unlocked?'This plan has no sections yet. Add the first one below.':'This plan has no sections yet.'}</div>`}
     ${unlocked?`<button class="addsec" data-act="addsec">+ New section</button>`:''}`;
   updateProgress();
 }
@@ -634,13 +641,16 @@ document.addEventListener('click',e=>{
       if(val){ const a=counts(plan().sections.flatMap(q=>q.exercises)); toast(a.d===a.t?'Workout complete! Tap “Reset ticks” to log it.':sec.name+' done ✓'); }
       break; }
     case 'addsec':
-      modal({title:'New section',fields:[{name:'name',label:'Section name (e.g. Shoulders)'}],ok:'Add section',
-        onOk:v=>{ if(!v.name) return 'Give the section a name.'; const s={id:uid(),name:v.name,collapsed:false,exercises:[]}; plan().sections.push(s); filter='all'; save(); render(); setTimeout(()=>document.querySelector(`[data-sec="${s.id}"]`)?.scrollIntoView({behavior:'smooth'}),50); }});
+      modal({title:'New section',fields:[{name:'name',label:'Section name (e.g. Shoulders)'},{name:'day',label:'Day (optional)',type:'select',value:'',options:dayOptions()}],ok:'Add section',
+        onOk:v=>{ if(!v.name) return 'Give the section a name.'; const s={id:uid(),name:v.name,collapsed:false,exercises:[]}; if(v.day) s.day=v.day; plan().sections.push(s); filter='all'; save(); render(); setTimeout(()=>document.querySelector(`[data-sec="${s.id}"]`)?.scrollIntoView({behavior:'smooth'}),50); }});
       break;
     case 'secmenu':{
       const p=plan(), i=p.sections.indexOf(sec);
       sheet(sec.name,[
         {icon:'✎',label:'Rename section',fn:()=>modal({title:'Rename section',fields:[{name:'name',label:'Section name',value:sec.name}],onOk:v=>{ if(!v.name) return 'Name can’t be empty.'; sec.name=v.name; save(); render(); }})},
+        {icon:'📅',label:sec.day?'Change day ('+sec.day+')':'Set day (Mon–Sun)',fn:()=>modal({title:'Workout day for '+sec.name,
+          fields:[{name:'day',label:'Day',type:'select',value:sec.day||'',options:dayOptions()}],
+          onOk:v=>{ if(v.day) sec.day=v.day; else delete sec.day; save(); render(); }})},
         i>0&&{icon:'↑',label:'Move up',fn:()=>{ move(p.sections,i,-1); save(); render(); }},
         i<p.sections.length-1&&{icon:'↓',label:'Move down',fn:()=>{ move(p.sections,i,1); save(); render(); }},
         {icon:'↺',label:'Reset ticks in this section',fn:()=>resetTicks(sec.id)},
