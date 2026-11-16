@@ -14,7 +14,7 @@
 :root{
   --bg:#eef1f5; --card:#ffffff; --ink:#101828; --mute:#667085; --line:#dde2ea;
   --accent:#2457ff; --accent-ink:#ffffff; --accent-soft:#e6ecff;
-  --good:#12803c; --bad:#d92d3a; --chip:#e3e8f0;
+  --good:#12803c; --warn:#b45309; --bad:#d92d3a; --chip:#e3e8f0;
   --shadow:0 1px 2px rgba(16,24,40,.06);
   --head:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
   --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
@@ -24,7 +24,7 @@
   :root{
     --bg:#12151c; --card:#1b1f29; --ink:#eef1f6; --mute:#9aa3b5; --line:#2b3140;
     --accent:#6b8cff; --accent-ink:#0b1020; --accent-soft:#232c4d;
-    --good:#4cd07d; --bad:#ff6b76; --chip:#262c3a; --shadow:none;
+    --good:#4cd07d; --warn:#ffb066; --bad:#ff6b76; --chip:#262c3a; --shadow:none;
     color-scheme:dark;
   }
 }
@@ -174,6 +174,25 @@ body.dragging-sec,body.dragging-ex{user-select:none;-webkit-user-select:none}
 .prl{font-size:14px;padding:7px 0;border-bottom:1px solid var(--line)}
 .prl:last-child{border-bottom:0}
 .prl small{color:var(--mute)}
+.tag{font:600 11px var(--body);letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);vertical-align:middle;margin-left:6px}
+.bar.over i{background:var(--warn)}
+.dnav{display:flex;align-items:center;gap:8px}
+.dnav .dt{flex:1;text-align:center;padding:2px 0;min-height:48px}
+.dnav .dt span{display:block;font:700 26px/1.1 var(--head)}
+.dnav .dt small{display:block;color:var(--mute);font-size:13px}
+.ib[disabled]{opacity:.35;cursor:default}
+.macros{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.macro small{display:block;color:var(--mute);font-size:12px}
+.macro b{font-size:13px;font-variant-numeric:tabular-nums}
+.macro .bar{height:6px;margin-top:4px}
+.pips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.pip{width:24px;height:32px;border-radius:7px 7px 11px 11px;border:2px solid var(--line);background:var(--bg)}
+.pip.on{background:var(--accent);border-color:var(--accent)}
+.mealh{display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+.mealh h3{font-size:22px}
+.mealh .btn{min-height:36px;font-size:14px;padding:0 12px}
+.bwin{width:110px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.bwin:read-only{background:transparent;border-color:transparent;text-align:right}
 /* rest bar */
 #rest{position:fixed;left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:30;transform:translateY(250%);transition:transform .2s;
   padding:12px 14px;border-radius:16px;background:var(--ink);color:var(--bg);box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -257,7 +276,9 @@ const KEY='ironlog.v1', TOKEN_KEY='ironlog.token', DIRTY_KEY='ironlog.dirty';
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const newSets=n=>Array.from({length:n},()=>({w:'',r:'',pw:'',pr:'',done:false}));
+const newSets=n=>Array.from({length:n},()=>({w:'',r:'',pw:'',pr:'',m:'',c:'',pm:'',pc:'',done:false}));
+const dietDefault=()=>({goals:{kcal:2200,p:150,c:250,f:70,water:8},days:{}});
+const CARDIO_RE=/\b(cardio|treadmill|thread\s?mill|run(ning)?|jog(ging)?|walk(ing)?|cycl(e|ing)|bike|biking|spin(ning)?|stepper|stair(s|master)?|elliptical|cross\s?trainer|rowing|rower|swim(ming)?|skipping|jump\s?rope|hiit|aerobics?|endurance)\b/i;
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const todayName=()=>['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
 const dayOptions=()=>[{v:'',t:'No day'},...DAYS.map(d=>({v:d,t:d}))];
@@ -271,12 +292,13 @@ function seedState(){
   }));
   const id=uid();
   return {plans:[{id,name:"Coach Thasleem Plan",sections}],activePlan:id,
-    settings:{rest:60,unit:'kg',auto:true,sound:true,wake:false},history:[]};
+    settings:{rest:60,unit:'kg',auto:true,sound:true,wake:false},history:[],diet:dietDefault()};
 }
 function normalize(s){
   if(!s||!Array.isArray(s.plans)||!s.plans.length) return seedState();
   s.settings=Object.assign({rest:60,unit:'kg',auto:true,sound:true,wake:false,goal:4},s.settings||{});
   s.history=Array.isArray(s.history)?s.history:[];
+  s.diet=Object.assign(dietDefault(),s.diet||{}); s.diet.goals=Object.assign(dietDefault().goals,s.diet.goals||{}); s.diet.days=s.diet.days||{};
   if(!s.plans.find(p=>p.id===s.activePlan)) s.activePlan=s.plans[0].id;
   return s;
 }
@@ -389,7 +411,7 @@ function modal({title,text,fields=[],ok='Save',danger=false,cancel='Cancel',onOk
     if(x.type==='checkbox') return `<label class="f cb"><input type="checkbox" name="${x.name}" ${x.value?'checked':''}> ${esc(x.label)}</label>`;
     if(x.type==='select') return `<label class="f">${esc(x.label)}<select name="${x.name}">${x.options.map(o=>`<option value="${esc(o.v)}" ${o.v===x.value?'selected':''}>${esc(o.t)}</option>`).join('')}</select></label>`;
     if(x.type==='textarea') return `<label class="f">${esc(x.label)}<textarea name="${x.name}" readonly>${esc(x.value||'')}</textarea></label>`;
-    return `<label class="f">${esc(x.label)}<input name="${x.name}" type="${x.type||'text'}" value="${esc(x.value??'')}" ${x.inputmode?`inputmode="${x.inputmode}"`:''} ${x.autocomplete?`autocomplete="${x.autocomplete}"`:'autocomplete="off"'} ${x.min!=null?`min="${x.min}"`:''} ${x.max!=null?`max="${x.max}"`:''}></label>`;
+    return `<label class="f">${esc(x.label)}<input name="${x.name}" type="${x.type||'text'}" value="${esc(x.value??'')}" ${x.inputmode?`inputmode="${x.inputmode}"`:''} ${x.autocomplete?`autocomplete="${x.autocomplete}"`:'autocomplete="off"'} ${x.min!=null?`min="${x.min}"`:''} ${x.max!=null?`max="${x.max}"`:''} ${x.step?`step="${x.step}"`:''}></label>`;
   }).join('');
   bg.innerHTML=`<form class="md" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>${text?`<p>${text}</p>`:''}${f}<div class="err" hidden></div><div class="mb"><button type="button" class="btn ghost" data-x>${esc(cancel)}</button>${hideOk?'':`<button class="btn ${danger?'danger':'pri'}">${esc(ok)}</button>`}</div></form>`;
   document.body.appendChild(bg);
@@ -437,34 +459,45 @@ function hintHTML(s){
   }
   return `Last time: ${s.pw!==''?esc(s.pw)+unit():'–'} × ${s.pr!==''?esc(s.pr):'–'}${d}`;
 }
-function setHTML(s,i){
+function cardioHint(s){
+  const pm=s.pm??'', pc=s.pc??''; if(pm===''&&pc==='') return '';
+  const m=parseFloat(s.m), q=parseFloat(pm); let d='';
+  if(!isNaN(m)&&!isNaN(q)){ if(m>q) d=` <b class="up">▲ +${fmt(m-q)} min</b>`; else if(m<q) d=` <b class="dn">▼ ${fmt(m-q)} min</b>`; }
+  return `Last time: ${pm!==''?esc(pm)+' min':'–'} · ${pc!==''?esc(pc)+' kcal':'– kcal'}${d}`;
+}
+function setHTML(s,i,cardio){
   const ro=unlocked?'':'readonly';
+  if(cardio) return `<div class="set ${s.done?'done':''}" data-i="${i}">
+    <button class="chk" data-act="tick" aria-label="Round ${i+1} done" aria-pressed="${s.done}">✓</button>
+    <label class="fld w"><input ${ro} data-f="m" inputmode="decimal" placeholder="${(s.pm??'')!==''?esc(s.pm):'0'}" value="${esc(s.m??'')}" aria-label="Round ${i+1} minutes"><em>min</em></label>
+    <label class="fld r"><input ${ro} data-f="c" inputmode="numeric" placeholder="${(s.pc??'')!==''?esc(s.pc):'0'}" value="${esc(s.c??'')}" aria-label="Round ${i+1} calories burned"><em>kcal</em></label>
+    <div class="hint">${cardioHint(s)}</div></div>`;
   return `<div class="set ${s.done?'done':''}" data-i="${i}">
     <button class="chk" data-act="tick" aria-label="Set ${i+1} done" aria-pressed="${s.done}">✓</button>
     <label class="fld w"><input ${ro} data-f="w" inputmode="decimal" placeholder="${s.pw!==''?esc(s.pw):'0'}" value="${esc(s.w)}" aria-label="Set ${i+1} weight"><em>${unit()}</em></label>
     <label class="fld r"><input ${ro} data-f="r" inputmode="numeric" placeholder="${s.pr!==''?esc(s.pr):'0'}" value="${esc(s.r)}" aria-label="Set ${i+1} reps"><em>reps</em></label>
     <div class="hint">${hintHTML(s)}</div></div>`;
 }
-function exHTML(x){
+function exHTML(x,cardio){
   return `<article class="ex" data-ex="${x.id}">
     <div class="eh">${unlocked?`<button class="grip" data-act="grab" data-drag="ex" aria-label="Drag to reorder exercise">${GRIP}</button>`:''}<span class="en">${esc(x.name)}</span>${x.url?`<a class="vid" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" aria-label="Watch video for ${esc(x.name)}">▶ ${linkLabel(x.url)}</a>`:''}<span class="ec" data-ecnt></span>
       ${unlocked?`<button class="ib" data-act="exmenu" aria-label="Exercise options">⋯</button>`:''}</div>
-    ${x.sets.map(setHTML).join('')}
-    ${unlocked?`<div class="ef"><button class="btn" data-act="addset">+ Set</button><button class="btn" data-act="delset">− Set</button></div>`:''}
+    ${x.sets.map((st,i)=>setHTML(st,i,cardio)).join('')}
+    ${unlocked?`<div class="ef"><button class="btn" data-act="addset">${cardio?'+ Round':'+ Set'}</button><button class="btn" data-act="delset">${cardio?'− Round':'− Set'}</button></div>`:''}
   </article>`;
 }
 function secHTML(s){
   return `<section class="sec ${s.collapsed?'closed':''}" data-sec="${s.id}">
     <div class="sh" data-act="toggle" role="button" tabindex="0" aria-expanded="${!s.collapsed}">
       ${unlocked?`<button class="grip" data-act="grab" data-drag="sec" aria-label="Drag to reorder section">${GRIP}</button>`:''}
-      <div class="t"><h2>${esc(s.name)}</h2><small data-scnt></small><div class="bar"><i data-sbar></i></div></div>
+      <div class="t"><h2>${esc(s.name)}${s.type==='cardio'?' <span class="tag">CARDIO</span>':''}</h2><small data-scnt></small><div class="bar"><i data-sbar></i></div></div>
       ${s.day?`<span class="day ${s.day===todayName()?'today':''}" aria-label="${esc(s.day)}">${esc(s.day.slice(0,3))}</span>`:''}
       <button class="schk" data-act="secdone" data-schk aria-label="Mark whole section done" aria-pressed="false">✓</button>
       ${unlocked?`<button class="ib" data-act="secmenu" aria-label="Section options">⋯</button>`:''}
       <span class="car">▾</span>
     </div>
     <div class="sb">
-      ${s.exercises.length?s.exercises.map(exHTML).join(''):`<div class="empty">No exercises yet.</div>`}
+      ${s.exercises.length?s.exercises.map(x=>exHTML(x,s.type==='cardio')).join(''):`<div class="empty">No exercises yet.</div>`}
       ${unlocked?`<button class="add" data-act="addex">+ Add exercise</button>`:''}
     </div></section>`;
 }
@@ -477,6 +510,7 @@ function render(){
     <button class="ib ${unlocked?'on':''}" data-act="lock" aria-label="${unlocked?'Lock editing':'Unlock editing'}">${unlocked?'🔓':'🔒'}</button>
     <button class="ib" data-act="menu" aria-label="Menu">☰</button>`;
   const secs=p.sections.filter(s=>filter==='all'||(filter==='today'?s.day===todayName():s.id===filter));
+  if(view==='diet'){ $('#app').innerHTML=tabsHTML()+dietHTML(); return; }
   if(view==='progress'){ $('#app').innerHTML=tabsHTML()+progressHTML(); return; }
   $('#app').innerHTML=`
     ${tabsHTML()}
@@ -502,8 +536,8 @@ function updateProgress(){
   const ob=$('#ovBar'); if(ob){ ob.style.width=(all.t?all.d/all.t*100:0)+'%'; $('#ovBarWrap').classList.toggle('full',all.t>0&&all.d===all.t); }
   p.sections.forEach(s=>{
     const el=document.querySelector(`[data-sec="${s.id}"]`); if(!el) return;
-    const c=counts(s.exercises);
-    el.querySelector('[data-scnt]').textContent=`${s.exercises.length} exercises · ${c.d}/${c.t} sets`;
+    const c=counts(s.exercises), cd=s.type==='cardio';
+    el.querySelector('[data-scnt]').textContent=`${s.exercises.length} exercise${s.exercises.length===1?'':'s'} · ${c.d}/${c.t} ${cd?'done':'sets'}`;
     el.querySelector('[data-sbar]').style.width=(c.t?c.d/c.t*100:0)+'%';
     el.querySelector('.sh .bar').classList.toggle('full',c.t>0&&c.d===c.t);
     const ck=el.querySelector('[data-schk]');
@@ -511,7 +545,7 @@ function updateProgress(){
     s.exercises.forEach(x=>{
       const xe=el.querySelector(`[data-ex="${x.id}"]`); if(!xe) return;
       const d=x.sets.filter(q=>q.done).length;
-      xe.querySelector('[data-ecnt]').textContent=`${d}/${x.sets.length} sets`;
+      xe.querySelector('[data-ecnt]').textContent=`${d}/${x.sets.length} ${cd?'done':'sets'}`;
       xe.classList.toggle('alldone',d===x.sets.length&&d>0);
     });
   });
@@ -566,7 +600,7 @@ function resetTicks(secId){
   let entry=null;
   if(!secId){ const b=buildSession(p); if(b.done>0) entry=Object.assign({t:Date.now(),plan:p.name},b); }
   secs.forEach(x=>x.exercises.forEach(e=>e.sets.forEach(st=>{
-    if(st.w!=='') st.pw=st.w; if(st.r!=='') st.pr=st.r; st.done=false;
+    if(st.w!=='') st.pw=st.w; if(st.r!=='') st.pr=st.r; if(st.m) st.pm=st.m; if(st.c) st.pc=st.c; st.done=false;
   })));
   let msg='Ticks cleared – your weights are kept';
   if(entry){
@@ -614,7 +648,7 @@ function openMenu(){
     {icon:'📋',label:'Copy data as JSON',fn:async()=>{ try{ await navigator.clipboard.writeText(JSON.stringify(S,null,2)); toast('Copied to clipboard'); }catch(e){ toast('Copy blocked – use Download backup'); } }},
     unlocked&&{icon:'📂',label:'Restore from backup file',fn:importData},
     {icon:'🔄',label:'Sync with server',fn:()=>loadServer(true)},
-    unlocked&&{icon:'♻️',label:'Restore Coach Thasleem plan',danger:true,fn:()=>confirmBox('Restore default?','This replaces ALL plans, weights and history on this device with the original coach plan.','Restore',()=>{ S=seedState(); save(); render(); toast('Default plan restored'); })},
+    unlocked&&{icon:'♻️',label:'Restore Coach Thasleem plan',danger:true,fn:()=>confirmBox('Restore default?','This replaces ALL plans, weights and workout history with the original coach plan. Your diet log is kept.','Restore',()=>{ { const dd=S.diet; S=seedState(); S.diet=dd; } save(); render(); toast('Default plan restored'); })},
     unlocked?{icon:'🔒',label:'Lock editing',fn:lockNow}:{icon:'🔓',label:'Unlock editing',fn:openUnlock}
   ]);
 }
@@ -658,7 +692,7 @@ function importData(){
 }
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
-  const ro=e.target.closest('input[readonly][data-f]'); if(ro&&!unlocked){ requireUnlock(); return; }
+  const ro=e.target.closest('input[readonly][data-f],input[readonly][data-dbw]'); if(ro&&!unlocked){ requireUnlock(); return; }
   const t=e.target.closest('[data-act]'); if(!t) return;
   const act=t.dataset.act;
   const secEl=t.closest('[data-sec]'), exEl=t.closest('[data-ex]'), setEl=t.closest('[data-i]');
@@ -679,7 +713,7 @@ document.addEventListener('click',e=>{
       const st=fx.ex.sets[+setEl.dataset.i]; st.done=!st.done; save();
       setEl.classList.toggle('done',st.done); t.setAttribute('aria-pressed',st.done); updateProgress();
       if(st.done){
-        if(S.settings.auto) startRest(S.settings.rest);
+        if(S.settings.auto&&fx.sec.type!=='cardio') startRest(S.settings.rest);
         const c=counts(plan().sections.flatMap(s=>s.exercises));
         if(c.t&&c.d===c.t) toast('Workout complete! Tap “Reset ticks” to log it.');
       }
@@ -688,6 +722,26 @@ document.addEventListener('click',e=>{
       if(!requireUnlock()) return;
       confirmBox('Reset ticks?','This logs your workout to Progress, then clears all ticks in this plan. Weights and reps stay so you can beat them next time (shown as “Last time”).','Reset ticks',()=>resetTicks());
       break;
+    case 'dprev': dietDate=dkey(addDays(dnoon(dietDate),-1)); render(); break;
+    case 'dnext': if(dietDate<dkey(Date.now())){ dietDate=dkey(addDays(dnoon(dietDate),1)); render(); } break;
+    case 'dtoday': dietDate=dkey(Date.now()); render(); break;
+    case 'dgoals': if(requireUnlock()) goalsModal(); break;
+    case 'addfood': if(requireUnlock()) foodModal(null,t.dataset.m); break;
+    case 'dwater': {
+      if(!requireUnlock()) return;
+      const d=dday(dietDate,true); d.water=Math.max(0,Math.min(30,d.water+Number(t.dataset.d))); saveDiet(); break; }
+    case 'qadd': {
+      if(!requireUnlock()) return;
+      const r=recentFoods()[Number(t.dataset.i)]; if(!r) break;
+      dday(dietDate,true).meals.push({id:uid(),type:defaultMeal(),name:r.name,k:r.k,p:r.p||0,c:r.c||0,f:r.f||0,t:Date.now()});
+      saveDiet(); toast('Added '+r.name); break; }
+    case 'foodmenu': {
+      const day=dday(dietDate), e=day.meals.find(x=>x.id===t.dataset.id); if(!e) break;
+      sheet(e.name,[
+        {icon:'✎',label:'Edit',fn:()=>foodModal(e)},
+        dietDate!==dkey(Date.now())&&{icon:'⧉',label:'Copy to today',fn:()=>{ dday(dkey(Date.now()),true).meals.push(Object.assign({},e,{id:uid(),t:Date.now()})); saveDiet(); toast('Copied to today'); }},
+        {icon:'🗑',label:'Delete',danger:true,fn:()=>confirmBox('Delete this food?',`“${esc(e.name)}” will be removed from ${dLabel(dietDate).toLowerCase()}.`,'Delete',()=>{ day.meals=day.meals.filter(x=>x.id!==e.id); saveDiet(); })}
+      ]); break; }
     case 'tab': view=t.dataset.v; render(); window.scrollTo(0,0); break;
     case 'prange': prange=t.dataset.v; render(); break;
     case 'pmetric': pmetric=t.dataset.v; render(); break;
@@ -705,8 +759,8 @@ document.addEventListener('click',e=>{
       if(val){ const a=counts(plan().sections.flatMap(q=>q.exercises)); toast(a.d===a.t?'Workout complete! Tap “Reset ticks” to log it.':sec.name+' done ✓'); }
       break; }
     case 'addsec':
-      modal({title:'New section',fields:[{name:'name',label:'Section name (e.g. Shoulders)'},{name:'day',label:'Day (optional)',type:'select',value:'',options:dayOptions()}],ok:'Add section',
-        onOk:v=>{ if(!v.name) return 'Give the section a name.'; const s={id:uid(),name:v.name,collapsed:false,exercises:[]}; if(v.day) s.day=v.day; plan().sections.push(s); filter='all'; save(); render(); setTimeout(()=>document.querySelector(`[data-sec="${s.id}"]`)?.scrollIntoView({behavior:'smooth'}),50); }});
+      modal({title:'New section',fields:[{name:'name',label:'Section name (e.g. Shoulders)'},{name:'day',label:'Day (optional)',type:'select',value:'',options:dayOptions()},{name:'type',label:'Section type',type:'select',value:'auto',options:[{v:'auto',t:'Auto-detect from name'},{v:'strength',t:'Strength – weight × reps'},{v:'cardio',t:'Cardio – minutes & calories'}]}],ok:'Add section',
+        onOk:v=>{ if(!v.name) return 'Give the section a name.'; const s={id:uid(),name:v.name,collapsed:false,exercises:[]}; if(v.day) s.day=v.day; if(v.type==='cardio'||(v.type==='auto'&&CARDIO_RE.test(v.name))) s.type='cardio'; plan().sections.push(s); filter='all'; save(); render(); setTimeout(()=>document.querySelector(`[data-sec="${s.id}"]`)?.scrollIntoView({behavior:'smooth'}),50); }});
       break;
     case 'secmenu':{
       const p=plan(), i=p.sections.indexOf(sec);
@@ -715,20 +769,21 @@ document.addEventListener('click',e=>{
         {icon:'📅',label:sec.day?'Change day ('+sec.day+')':'Set day (Mon–Sun)',fn:()=>modal({title:'Workout day for '+sec.name,
           fields:[{name:'day',label:'Day',type:'select',value:sec.day||'',options:dayOptions()}],
           onOk:v=>{ if(v.day) sec.day=v.day; else delete sec.day; save(); render(); }})},
+        {icon:'🏃',label:sec.type==='cardio'?'Change to strength (weight × reps)':'Change to cardio (minutes & calories)',fn:()=>{ if(sec.type==='cardio') delete sec.type; else sec.type='cardio'; save(); render(); toast(sec.type==='cardio'?'Section is now cardio':'Section is now strength'); }},
         i>0&&{icon:'↑',label:'Move up',fn:()=>{ move(p.sections,i,-1); save(); render(); }},
         i<p.sections.length-1&&{icon:'↓',label:'Move down',fn:()=>{ move(p.sections,i,1); save(); render(); }},
         {icon:'↺',label:'Reset ticks in this section',fn:()=>resetTicks(sec.id)},
         {icon:'🗑',label:'Delete section',danger:true,fn:()=>confirmBox('Delete section?',`“${esc(sec.name)}” and its ${sec.exercises.length} exercises will be removed. This can’t be undone.`,'Delete section',()=>{ p.sections.splice(i,1); save(); render(); toast('Section deleted'); })}
       ]); break; }
     case 'addex':
-      modal({title:'Add exercise to '+sec.name,fields:[{name:'name',label:'Exercise name'},{name:'url',label:'Video link (optional)',inputmode:'url'},{name:'n',label:'Number of sets',type:'number',inputmode:'numeric',min:1,max:12,value:3}],ok:'Add exercise',
+      modal({title:'Add exercise to '+sec.name,fields:[{name:'name',label:'Exercise name'},{name:'url',label:'Video link (optional)',inputmode:'url'},{name:'n',label:sec.type==='cardio'?'Number of rounds':'Number of sets',type:'number',inputmode:'numeric',min:1,max:12,value:sec.type==='cardio'?1:3}],ok:'Add exercise',
         onOk:v=>{ const n=parseInt(v.n,10); if(!v.name) return 'Give the exercise a name.'; if(!(n>=1&&n<=12)) return 'Sets must be between 1 and 12.';
           const u=cleanUrl(v.url); if(u===null) return 'That doesn’t look like a valid link. Paste the full address.';
           const nx={id:uid(),name:v.name,sets:newSets(n)}; if(u) nx.url=u; sec.exercises.push(nx); save(); render(); }});
       break;
     case 'addset':
       if(fx.ex.sets.length>=12){ toast('12 sets is the maximum'); break; }
-      fx.ex.sets.push({w:'',r:'',pw:'',pr:'',done:false}); save(); render(); break;
+      fx.ex.sets.push(newSets(1)[0]); save(); render(); break;
     case 'delset':
       if(fx.ex.sets.length<=1){ toast('An exercise needs at least one set'); break; }
       fx.ex.sets.pop(); save(); render(); break;
@@ -754,14 +809,15 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('change',e=>{
   if(e.target.matches('[data-pex]')){ pex=e.target.value; render(); }
+  if(e.target.matches('[data-dbw]')&&unlocked){ const d=dday(dietDate,true); d.bw=e.target.value.replace(',','.').trim(); pruneDiet(); save(); }
 });
 document.addEventListener('input',e=>{
   const el=e.target; if(!el.dataset||!el.dataset.f||el.readOnly) return;
   const row=el.closest('[data-i]'), exEl=el.closest('[data-ex]'); const fx=findEx(exEl.dataset.ex); if(!fx) return;
   const st=fx.ex.sets[+row.dataset.i];
-  let v=el.value; if(el.dataset.f==='w') v=v.replace(',','.');
+  let v=el.value; if(el.dataset.f==='w'||el.dataset.f==='m') v=v.replace(',','.');
   st[el.dataset.f]=v.trim(); save();
-  row.querySelector('.hint').innerHTML=hintHTML(st);
+  row.querySelector('.hint').innerHTML=(el.dataset.f==='m'||el.dataset.f==='c')?cardioHint(st):hintHTML(st);
 });
 
 /* ---------- progress & analytics ---------- */
@@ -772,19 +828,32 @@ const fk=n=>n>=10000?Math.round(n/1000)+'k':n>=1000?(n/1000).toFixed(1).replace(
 const sow=d=>{ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; };
 const addDays=(t,n)=>{ const d=new Date(t); d.setDate(d.getDate()+n); return d.getTime(); };
 const shortDate=t=>new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short'});
-const tabsHTML=()=>`<div class="tabs" role="tablist"><button class="tab ${view==='workout'?'on':''}" data-act="tab" data-v="workout" role="tab">Workout</button><button class="tab ${view==='progress'?'on':''}" data-act="tab" data-v="progress" role="tab">Progress</button></div>`;
+const tabsHTML=()=>`<div class="tabs" role="tablist">${[['workout','Workout'],['diet','Diet'],['progress','Progress']].map(t=>`<button class="tab ${view===t[0]?'on':''}" data-act="tab" data-v="${t[0]}" role="tab" aria-selected="${view===t[0]}">${t[1]}</button>`).join('')}</div>`;
 
 function buildSession(p){
-  let done=0,total=0,vol=0; const sec={}, ex=[];
+  let done=0,total=0,vol=0,tMin=0,tKcal=0; const sec={}, ex=[];
   p.sections.forEach(sc=>sc.exercises.forEach(x=>{
-    let n=0,v=0,top=0,topR=0;
+    const cardio=sc.type==='cardio';
+    let n=0,v=0,top=0,topR=0,mins=0,kc=0;
     x.sets.forEach(st=>{
       total++;
-      if(st.done){ done++; n++; const w=num(st.w), r=num(st.r); v+=w*r; if(w>top||(w===top&&r>topR)){ top=w; topR=r; } }
+      if(st.done){
+        done++; n++;
+        if(cardio){ mins+=num(st.m); kc+=num(st.c); }
+        else { const w=num(st.w), r=num(st.r); v+=w*r; if(w>top||(w===top&&r>topR)){ top=w; topR=r; } }
+      }
     });
-    if(n){ vol+=v; const k=sec[sc.name]||(sec[sc.name]={s:0,v:0}); k.s+=n; k.v+=Math.round(v); ex.push([x.name,n,top,topR,Math.round(v),sc.name]); }
+    if(!n) return;
+    if(cardio){
+      tMin+=mins; tKcal+=kc;
+      const k=sec[sc.name]||(sec[sc.name]={s:0,v:0,c:1,m:0,k:0}); k.s+=n; k.m+=Math.round(mins); k.k+=Math.round(kc);
+      ex.push([x.name,n,0,0,0,sc.name,Math.round(mins),Math.round(kc)]);
+    }else{
+      vol+=v; const k=sec[sc.name]||(sec[sc.name]={s:0,v:0}); k.s+=n; k.v+=Math.round(v);
+      ex.push([x.name,n,top,topR,Math.round(v),sc.name]);
+    }
   }));
-  return {done,total,vol:Math.round(vol),sec,ex};
+  return {done,total,vol:Math.round(vol),min:Math.round(tMin),kcal:Math.round(tKcal),sec,ex};
 }
 function exPRs(hist,i){
   const h=hist[i]; if(!h||!h.ex) return [];
@@ -797,7 +866,7 @@ function exPRs(hist,i){
   });
   return out;
 }
-function agg(list){ return list.reduce((a,h)=>({n:a.n+1,sets:a.sets+h.done,vol:a.vol+h.vol}),{n:0,sets:0,vol:0}); }
+function agg(list){ return list.reduce((a,h)=>({n:a.n+1,sets:a.sets+h.done,vol:a.vol+h.vol,min:a.min+(h.min||0),kcal:a.kcal+(h.kcal||0)}),{n:0,sets:0,vol:0,min:0,kcal:0}); }
 function delta(c,p){
   if(p==null) return '';
   if(!p) return c?'<b class="up">new</b>':'';
@@ -846,8 +915,13 @@ function barsHTML(b){
 }
 function muscleAgg(list){
   const m={};
-  list.forEach(h=>Object.entries(h.sec||{}).forEach(([n,v])=>{ const k=n.trim().toLowerCase(); const o=m[k]||(m[k]={name:n,s:0,v:0}); o.s+=v.s; o.v+=v.v; }));
+  list.forEach(h=>Object.entries(h.sec||{}).forEach(([n,v])=>{ if(v.c) return; const k=n.trim().toLowerCase(); const o=m[k]||(m[k]={name:n,s:0,v:0}); o.s+=v.s; o.v+=v.v; }));
   return Object.values(m).sort((a,b)=>(pmetric==='sets'?b.s-a.s:b.v-a.v)||b.s-a.s);
+}
+function cardioAgg(list){
+  const m={};
+  list.forEach(h=>Object.entries(h.sec||{}).forEach(([n,v])=>{ if(!v.c) return; const k=n.trim().toLowerCase(); const o=m[k]||(m[k]={name:n,m:0,k:0}); o.m+=v.m||0; o.k+=v.k||0; }));
+  return Object.values(m).sort((a,b)=>b.m-a.m);
 }
 function lineChart(pts,suffix){
   const W=320,Hh=150,pl=38,pr=12,pt=14,pb=26;
@@ -862,21 +936,30 @@ function lineChart(pts,suffix){
 }
 function exerciseHTML(){
   const names=[]; S.history.forEach(h=>(h.ex||[]).forEach(e=>{ if(!names.includes(e[0])) names.push(e[0]); }));
-  if(!names.length) return `<div class="panel"><h3>Exercise progress</h3><p class="mute">Strength charts appear after your next logged workout.</p></div>`;
+  if(!names.length) return `<div class="panel"><h3>Exercise progress</h3><p class="mute">Charts appear after your next logged workout.</p></div>`;
   if(!pex||!names.includes(pex)) pex=names[0];
   let mx=0; const all=[];
-  for(let i=S.history.length-1;i>=0;i--){ const h=S.history[i]; (h.ex||[]).forEach(e=>{ if(e[0]===pex){ all.push({t:h.t,w:e[2],r:e[3],pr:all.length>0&&e[2]>mx&&e[2]>0}); if(e[2]>mx) mx=e[2]; } }); }
+  for(let i=S.history.length-1;i>=0;i--){ const h=S.history[i]; (h.ex||[]).forEach(e=>{ if(e[0]===pex){ all.push({t:h.t,w:e[2],r:e[3],m:e[6]||0,k:e[7]||0,card:e.length>=8,pr:all.length>0&&e[2]>mx&&e[2]>0}); if(e[2]>mx) mx=e[2]; } }); }
+  const sel=`<select class="sel" data-pex aria-label="Choose exercise">${names.map(n=>`<option value="${esc(n)}" ${n===pex?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
+  if(all[all.length-1].card){
+    const pts=all.slice(-20).map(p=>({t:p.t,y:p.m,pr:false}));
+    let bm=0,bk=0; all.forEach(p=>{ bm=Math.max(bm,p.m); bk=Math.max(bk,p.k); });
+    const ch=pts[pts.length-1].y-pts[0].y;
+    return `<div class="panel"><h3>Exercise progress</h3>${sel}
+      ${pts.length>1?lineChart(pts):`<p class="mute">Only one session logged so far. Do it again to see a line.</p>`}
+      <div class="st3"><div><small>Longest</small><b>${fmt(bm)} min</b></div><div><small>Most calories</small><b>${fmt(bk)} kcal</b></div>
+        <div><small>Change</small><b style="color:${ch>0?'var(--good)':ch<0?'var(--bad)':'inherit'}">${pts.length>1?(ch>0?'▲ +':ch<0?'▼ ':'')+fmt(ch)+' min':'–'}</b></div></div>
+      <p class="mute">Minutes per session · last ${pts.length} session${pts.length>1?'s':''}.</p></div>`;
+  }
   const useReps=all.every(p=>p.w===0), pts=all.slice(-20).map(p=>({t:p.t,y:useReps?p.r:p.w,pr:p.pr,w:p.w,r:p.r}));
-  const u=useReps?' reps':unit();
   let best=pts[0]; pts.forEach(p=>{ if(p.y>best.y||(p.y===best.y&&p.r>best.r)) best=p; });
   let e1=0; all.forEach(p=>{ if(p.w>0&&p.r>0) e1=Math.max(e1,p.w*(1+p.r/30)); });
   const ch=pts[pts.length-1].y-pts[0].y;
-  return `<div class="panel"><h3>Exercise progress</h3>
-    <select class="sel" data-pex aria-label="Choose exercise">${names.map(n=>`<option value="${esc(n)}" ${n===pex?'selected':''}>${esc(n)}</option>`).join('')}</select>
+  return `<div class="panel"><h3>Exercise progress</h3>${sel}
     ${pts.length>1?lineChart(pts):`<p class="mute">Only one session logged so far. Do it again to see a line.</p>`}
     <div class="st3"><div><small>Best set</small><b>${useReps?fmt(best.y)+' reps':fmt(best.w)+unit()+' × '+fmt(best.r)}</b></div>
       <div><small>Est. 1RM</small><b>${e1?fmt(Math.round(e1*10)/10)+unit():'–'}</b></div>
-      <div><small>Change</small><b class="${ch>0?'up':ch<0?'dn':''}" style="color:${ch>0?'var(--good)':ch<0?'var(--bad)':'inherit'}">${pts.length>1?(ch>0?'▲ +':ch<0?'▼ ':'')+fmt(ch)+(useReps?'':unit()):'–'}</b></div></div>
+      <div><small>Change</small><b style="color:${ch>0?'var(--good)':ch<0?'var(--bad)':'inherit'}">${pts.length>1?(ch>0?'▲ +':ch<0?'▼ ':'')+fmt(ch)+(useReps?'':unit()):'–'}</b></div></div>
     <p class="mute">Top ${useReps?'reps':'weight'} per session · last ${pts.length} session${pts.length>1?'s':''}. Green dots are personal records.</p></div>`;
 }
 function progressHTML(){
@@ -891,9 +974,12 @@ function progressHTML(){
   const ranges=[['week','Week'],['month','30 days'],['quarter','90 days'],['all','All time']];
   const bk=buckets(), muscle=muscleAgg(cur), mTot=muscle.reduce((t,x)=>t+(pmetric==='sets'?x.s:x.v),0), mMax=Math.max(1,...muscle.map(x=>pmetric==='sets'?x.s:x.v));
   const hit=new Set(muscle.map(x=>x.name.trim().toLowerCase()));
-  const missing=plan().sections.map(x=>x.name).filter(n=>!hit.has(n.trim().toLowerCase()));
+  const missing=plan().sections.filter(x=>x.type!=='cardio').map(x=>x.name).filter(n=>!hit.has(n.trim().toLowerCase()));
   const prs=[]; H.forEach((h,i)=>{ if(h.t>=b.from&&h.t<b.to) exPRs(H,i).forEach(x=>prs.push(Object.assign({t:h.t},x))); });
   const U=unit();
+  const cr=cardioAgg(cur), crMax=Math.max(1,...cr.map(x=>x.m));
+  const cardioPanel=cr.length?`<div class="panel"><h3>Cardio</h3><p class="mute">${esc(b.title)} · minutes and calories burned</p>${cr.map(x=>`<div class="mr"><span>${esc(x.name)}</span><div class="mt"><i style="width:${Math.round(x.m/crMax*100)}%"></i></div><em>${fk(x.m)} min · ${fk(x.k)} kcal</em></div>`).join('')}</div>`:'';
+  const cardioCards=(a.min||a.kcal)?`<div class="pg" style="margin-top:10px"><div class="pc"><small>Cardio minutes</small><span class="big">${fk(a.min)}</span>${delta(a.min,pa&&pa.min)}</div><div class="pc"><small>Calories burned (kcal)</small><span class="big">${fk(a.kcal)}</span>${delta(a.kcal,pa&&pa.kcal)}</div></div>`:'';
   return `
   <div class="panel" style="margin-top:0"><div class="prow"><h3>Weekly goal</h3><b>${sw} / ${goal} sessions</b></div>
     <div class="bar ${sw>=goal?'full':''}"><i style="width:${Math.min(100,sw/goal*100)}%"></i></div>
@@ -905,6 +991,7 @@ function progressHTML(){
     <div class="pc"><small>Volume (${U})</small><span class="big">${fk(a.vol)}</span>${delta(a.vol,pa&&pa.vol)}</div>
     <div class="pc"><small>Avg per session (${U})</small><span class="big">${a.n?fk(a.vol/a.n):'–'}</span><b>${b.vs?'vs '+esc(b.vs):''}</b></div>
   </div>
+  ${cardioCards}
   <div class="panel"><div class="prow"><h3>${pmetric==='sets'?'Sets':'Volume'} ${bk.unit}</h3><span class="mute">${esc(b.title)}</span></div>
     <div class="seg"><button class="chip ${pmetric==='vol'?'on':''}" data-act="pmetric" data-v="vol">Volume</button><button class="chip ${pmetric==='sets'?'on':''}" data-act="pmetric" data-v="sets">Sets</button></div>
     ${barsHTML(bk)}</div>
@@ -912,11 +999,117 @@ function progressHTML(){
     ${muscle.length?muscle.map(x=>{ const v=pmetric==='sets'?x.s:x.v; return `<div class="mr"><span>${esc(x.name)}</span><div class="mt"><i style="width:${Math.round(v/mMax*100)}%"></i></div><em>${pmetric==='sets'?x.s+' sets':fk(x.v)} · ${mTot?Math.round(v/mTot*100):0}%</em></div>`; }).join('')
       :`<p class="mute" style="margin-top:10px">${cur.length?'Muscle-group detail is recorded for workouts logged from now on.':'No sessions in this period.'}</p>`}
     ${muscle.length&&missing.length?`<p class="mute" style="margin-top:12px">Not trained in this period: ${missing.map(esc).join(', ')}</p>`:''}</div>
+  ${cardioPanel}
   ${exerciseHTML()}
   ${prs.length?`<div class="panel"><h3>Personal records</h3><p class="mute">${esc(b.title)}</p>${prs.slice(0,6).map(x=>`<div class="prl">🏆 <b>${esc(x.name)}</b> ${fmt(x.w)}${U}${x.r?' × '+fmt(x.r):''} <small>· ${shortDate(x.t)}</small></div>`).join('')}</div>`:''}
   <div class="panel"><h3>Recent sessions</h3>
     ${H.slice(0,6).map((h,i)=>{ const n=exPRs(H,i).length; return `<div class="srow"><div class="a"><b>${new Date(h.t).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})}${n?` · 🏆 ${n}`:''}</b><small>${esc(h.plan)} · ${h.done}/${h.total} sets</small></div><div class="r">${fk(h.vol)} ${U}</div>${unlocked?`<button class="ib" data-act="delsess" data-t="${h.t}" aria-label="Delete session">🗑</button>`:''}</div>`; }).join('')}
   </div>`;
+}
+
+/* ---------- diet tracking ---------- */
+const MEALS=['Breakfast','Lunch','Dinner','Snacks'];
+const dkey=t=>{ const d=new Date(t); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const dnoon=k=>new Date(k+'T12:00:00').getTime();
+let dietDate=dkey(Date.now());
+function dday(k,create){
+  const D=S.diet.days;
+  if(!D[k]){ if(!create) return {meals:[],water:0,bw:''}; D[k]={meals:[],water:0,bw:''}; }
+  return D[k];
+}
+const dTot=ms=>ms.reduce((a,m)=>({k:a.k+m.k,p:a.p+(m.p||0),c:a.c+(m.c||0),f:a.f+(m.f||0)}),{k:0,p:0,c:0,f:0});
+function dLabel(k){
+  if(k===dkey(Date.now())) return 'Today';
+  if(k===dkey(addDays(Date.now(),-1))) return 'Yesterday';
+  return new Date(dnoon(k)).toLocaleDateString(undefined,{weekday:'long'});
+}
+function pruneDiet(){
+  const cut=dkey(addDays(Date.now(),-180));
+  Object.keys(S.diet.days).forEach(k=>{ const d=S.diet.days[k]; if(k<cut||(!d.meals.length&&!d.water&&!d.bw)) delete S.diet.days[k]; });
+}
+function saveDiet(){ pruneDiet(); save(); render(); }
+function recentFoods(){
+  const seen=new Set(), out=[];
+  for(const k of Object.keys(S.diet.days).sort().reverse()){
+    for(const m of S.diet.days[k].meals.slice().reverse()){
+      const n=m.name.trim().toLowerCase(); if(seen.has(n)) continue; seen.add(n); out.push(m); if(out.length>=8) return out;
+    }
+  }
+  return out;
+}
+const defaultMeal=()=>{ const h=new Date().getHours(); return h<11?'Breakfast':h<15?'Lunch':h<18?'Snacks':'Dinner'; };
+const macroText=x=>(x.p||x.c||x.f)?`P ${fmt(x.p||0)} · C ${fmt(x.c||0)} · F ${fmt(x.f||0)} g`:'';
+function foodModal(e,meal){
+  modal({title:e?'Edit food':'Add food',fields:[
+    {name:'meal',label:'Meal',type:'select',value:e?e.type:meal,options:MEALS.map(m=>({v:m,t:m}))},
+    {name:'name',label:'Food (e.g. Chicken rice bowl)',value:e?e.name:''},
+    {name:'k',label:'Calories (kcal)',type:'number',inputmode:'numeric',min:0,step:1,value:e?e.k:''},
+    {name:'p',label:'Protein (g) – optional',type:'number',inputmode:'decimal',min:0,step:'any',value:e&&e.p?e.p:''},
+    {name:'c',label:'Carbs (g) – optional',type:'number',inputmode:'decimal',min:0,step:'any',value:e&&e.c?e.c:''},
+    {name:'f',label:'Fat (g) – optional',type:'number',inputmode:'decimal',min:0,step:'any',value:e&&e.f?e.f:''}],
+    ok:e?'Save':'Add food',
+    onOk:v=>{
+      if(!v.name) return 'Enter a food name.';
+      const p=parseFloat(v.p)||0, c=parseFloat(v.c)||0, f=parseFloat(v.f)||0;
+      let k=v.k===''?NaN:Math.round(parseFloat(v.k));
+      if(isNaN(k)){ if(p||c||f) k=Math.round(p*4+c*4+f*9); else return 'Enter the calories (or the macros).'; }
+      if(k<0||p<0||c<0||f<0) return 'Numbers can’t be negative.';
+      if(e) Object.assign(e,{type:v.meal,name:v.name,k,p,c,f});
+      else dday(dietDate,true).meals.push({id:uid(),type:v.meal,name:v.name,k,p,c,f,t:Date.now()});
+      saveDiet();
+    }});
+}
+function goalsModal(){
+  const g=S.diet.goals;
+  modal({title:'Daily diet goals',fields:[
+    {name:'kcal',label:'Calories (kcal)',type:'number',inputmode:'numeric',min:500,max:10000,step:1,value:g.kcal},
+    {name:'p',label:'Protein (g)',type:'number',inputmode:'numeric',min:0,max:500,step:1,value:g.p},
+    {name:'c',label:'Carbs (g)',type:'number',inputmode:'numeric',min:0,max:1000,step:1,value:g.c},
+    {name:'f',label:'Fat (g)',type:'number',inputmode:'numeric',min:0,max:500,step:1,value:g.f},
+    {name:'water',label:'Water (glasses of 250 ml)',type:'number',inputmode:'numeric',min:1,max:30,step:1,value:g.water}],
+    ok:'Save goals',
+    onOk:v=>{
+      const n={kcal:parseInt(v.kcal,10),p:parseInt(v.p,10),c:parseInt(v.c,10),f:parseInt(v.f,10),water:parseInt(v.water,10)};
+      if(!(n.kcal>=500&&n.kcal<=10000)) return 'Calories must be between 500 and 10,000.';
+      if([n.p,n.c,n.f].some(x=>!(x>=0))) return 'Protein, carbs and fat must be 0 or more.';
+      if(!(n.water>=1&&n.water<=30)) return 'Water goal must be between 1 and 30 glasses.';
+      S.diet.goals=n; saveDiet(); toast('Goals saved');
+    }});
+}
+function dietHTML(){
+  const g=S.diet.goals, day=dday(dietDate), T=dTot(day.meals), U=unit();
+  const today=dkey(Date.now()), isToday=dietDate===today;
+  const left=g.kcal-T.k, pctOf=(v,goal)=>Math.min(100,goal?v/goal*100:0);
+  const macro=(n,v,goal)=>`<div class="macro"><small>${n}</small><b>${fmt(v)} / ${goal} g</b><div class="bar ${v>goal?'over':''}"><i style="width:${pctOf(v,goal)}%"></i></div></div>`;
+  const rec=unlocked?recentFoods():[];
+  const groups=MEALS.map(m=>{
+    const items=day.meals.filter(x=>x.type===m), sub=items.reduce((t,x)=>t+x.k,0);
+    return `<div class="mealh"><h3>${m}</h3><div class="prow" style="gap:10px"><span class="mute" style="margin:0">${sub?fk(sub)+' kcal':''}</span>${unlocked?`<button class="btn" data-act="addfood" data-m="${m}">+ Add</button>`:''}</div></div>
+      <div class="panel" style="margin-top:6px;padding:4px 14px">${items.length?items.map(x=>`<div class="srow"><div class="a"><b>${esc(x.name)}</b>${macroText(x)?`<small>${macroText(x)}</small>`:''}</div><div class="r">${x.k} kcal</div>${unlocked?`<button class="ib" data-act="foodmenu" data-id="${x.id}" aria-label="Food options">⋯</button>`:''}</div>`).join(''):`<p class="mute" style="padding:10px 0;margin:0">Nothing logged.</p>`}</div>`;
+  }).join('');
+  const bwKeys=Object.keys(S.diet.days).filter(k=>S.diet.days[k].bw&&k<dietDate).sort().reverse();
+  const lastK=bwKeys[0], lastBW=lastK?num(S.diet.days[lastK].bw):0, curBW=num(day.bw);
+  const bwNote=lastK?`Last logged: ${fmt(lastBW)} ${U} · ${shortDate(dnoon(lastK))}${curBW?` · ${curBW>lastBW?'▲ +':curBW<lastBW?'▼ ':''}${fmt(curBW-lastBW)} ${U}`:''}`:'Log your body weight to see the trend.';
+  const bars=[]; for(let i=6;i>=0;i--){ const k=dkey(addDays(dnoon(dietDate),-i)); bars.push({l:new Date(dnoon(k)).toLocaleDateString(undefined,{weekday:'narrow'}),v:dTot(dday(k).meals).k,cur:i===0}); }
+  const logged=bars.filter(x=>x.v>0), avg=logged.length?Math.round(logged.reduce((t,x)=>t+x.v,0)/logged.length):0;
+  const pips=Math.max(g.water,day.water);
+  return `
+  <div class="dnav"><button class="ib" data-act="dprev" aria-label="Previous day">‹</button>
+    <button class="dt" data-act="dtoday" aria-label="Jump to today"><span>${dLabel(dietDate)}</span><small>${new Date(dnoon(dietDate)).toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'})}</small></button>
+    <button class="ib" data-act="dnext" ${isToday?'disabled':''} aria-label="Next day">›</button></div>
+  <div class="panel"><div class="prow"><h3>Calories</h3><b>${T.k.toLocaleString()} / ${g.kcal.toLocaleString()} kcal</b></div>
+    <div class="bar ${T.k>g.kcal?'over':''}"><i style="width:${pctOf(T.k,g.kcal)}%"></i></div>
+    <p class="mute">${left>=0?left.toLocaleString()+' kcal left':(-left).toLocaleString()+' kcal over your goal'}</p>
+    <div class="macros">${macro('Protein',T.p,g.p)}${macro('Carbs',T.c,g.c)}${macro('Fat',T.f,g.f)}</div>
+    <button class="chip" style="margin-top:12px" data-act="dgoals">Edit daily goals</button></div>
+  <div class="panel"><div class="prow"><h3>Water</h3><b>${day.water} / ${g.water} glasses</b></div>
+    <div class="pips">${Array.from({length:pips},(_,i)=>`<span class="pip ${i<day.water?'on':''}"></span>`).join('')}</div>
+    <div class="ovb" style="margin-top:4px"><button class="btn" data-act="dwater" data-d="-1" aria-label="Remove a glass">− Glass</button><button class="btn pri" data-act="dwater" data-d="1" aria-label="Add a glass">+ Glass</button></div>
+    <p class="mute">1 glass ≈ 250 ml</p></div>
+  ${rec.length?`<div class="panel"><h3>Quick add</h3><p class="mute">Tap to log again as ${defaultMeal().toLowerCase()}</p><div class="chips" style="padding:8px 0 0;flex-wrap:wrap">${rec.map((x,i)=>`<button class="chip" data-act="qadd" data-i="${i}">${esc(x.name)} · ${x.k}</button>`).join('')}</div></div>`:''}
+  ${groups}
+  <div class="panel"><div class="prow"><h3>Body weight</h3><div style="display:flex;align-items:center;gap:8px"><input class="bwin" data-dbw inputmode="decimal" ${unlocked?'':'readonly'} value="${esc(day.bw||'')}" placeholder="0" aria-label="Body weight"><span class="mute" style="margin:0">${U}</span></div></div><p class="mute">${bwNote}</p></div>
+  <div class="panel"><h3>Last 7 days</h3><p class="mute">Calories per day · ${logged.length?`average ${avg.toLocaleString()} kcal on ${logged.length} logged day${logged.length>1?'s':''}`:'nothing logged yet'} · goal ${g.kcal.toLocaleString()}</p>${barsHTML({bars})}</div>`;
 }
 
 /* ---------- drag & drop (touch + mouse) ---------- */
